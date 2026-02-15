@@ -442,7 +442,6 @@ acquire_orchestrator_lock() {
 
   if [ -n "$existing_pid" ] && kill -0 "$existing_pid" 2>/dev/null; then
     echo "Another orchestrator instance is already running (pid=$existing_pid)."
-    write_orchestrator_heartbeat "blocked" "Single-instance lock held by pid=$existing_pid" 0
     return 1
   fi
 
@@ -450,7 +449,6 @@ acquire_orchestrator_lock() {
     local age=$((now - started_at))
     if [ "$age" -lt "$LOCK_STALE_SECONDS" ]; then
       echo "Orchestrator lock exists without pid and is not stale yet (${age}s < ${LOCK_STALE_SECONDS}s)."
-      write_orchestrator_heartbeat "blocked" "Lock exists and is not stale yet" 0
       return 1
     fi
   fi
@@ -465,7 +463,6 @@ acquire_orchestrator_lock() {
   fi
 
   echo "Failed to acquire orchestrator lock."
-  write_orchestrator_heartbeat "blocked" "Failed to acquire lock" 1
   return 1
 }
 
