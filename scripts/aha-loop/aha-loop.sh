@@ -1,6 +1,6 @@
 #!/bin/bash
 # Aha Loop Executor - Autonomous AI agent loop with Research, Exploration & Plan Review
-# Usage: ./aha-loop.sh [--tool amp|claude] [--phase research|explore|plan-review|implement|all] [--max-iterations N] [--workspace PATH]
+# Usage: ./aha-loop.sh [--tool amp|claude|codex] [--phase research|explore|plan-review|implement|all] [--max-iterations N] [--workspace PATH]
 
 set -e
 
@@ -15,6 +15,10 @@ TOOL="amp"
 PHASE="all"
 MAX_ITERATIONS=10
 CLI_WORKSPACE=""
+CODEX_PROFILE="${AHA_CODEX_PROFILE:-}"
+CODEX_SANDBOX="${AHA_CODEX_SANDBOX:-workspace-write}"
+CODEX_APPROVAL="${AHA_CODEX_APPROVAL:-never}"
+CODEX_FLAGS="${AHA_CODEX_FLAGS:-}"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -60,9 +64,16 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Validate arguments
-if [[ "$TOOL" != "amp" && "$TOOL" != "claude" ]]; then
-  echo "Error: Invalid tool '$TOOL'. Must be 'amp' or 'claude'."
+if [[ "$TOOL" != "amp" && "$TOOL" != "claude" && "$TOOL" != "codex" ]]; then
+  echo "Error: Invalid tool '$TOOL'. Must be 'amp', 'claude', or 'codex'."
   exit 1
+fi
+
+if [[ "$TOOL" == "codex" ]]; then
+  if ! command -v codex >/dev/null 2>&1; then
+    echo "Error: codex CLI not found in PATH. Install Codex CLI or use --tool amp|claude."
+    exit 1
+  fi
 fi
 
 if [[ "$PHASE" != "all" && "$PHASE" != "research" && "$PHASE" != "explore" && "$PHASE" != "plan-review" && "$PHASE" != "implement" ]]; then
@@ -70,9 +81,23 @@ if [[ "$PHASE" != "all" && "$PHASE" != "research" && "$PHASE" != "explore" && "$
   exit 1
 fi
 
+# Keep skill provider aligned with selected tool
+export AHA_SKILL_PROVIDER="$TOOL"
+
 # Initialize paths (handles workspace detection)
 init_paths --workspace "$CLI_WORKSPACE"
 export_paths
+
+# Run the loop from the workspace root so relative paths and git commands behave as expected.
+cd "$WORKSPACE_ROOT"
+
+# Select prompt file per tool
+PROMPT_FILE="$SCRIPT_DIR/prompt.md"
+if [[ "$TOOL" == "claude" ]]; then
+  PROMPT_FILE="$SCRIPT_DIR/CLAUDE.md"
+elif [[ "$TOOL" == "codex" ]] && [[ -f "$SCRIPT_DIR/CODEX.md" ]]; then
+  PROMPT_FILE="$SCRIPT_DIR/CODEX.md"
+fi
 
 # Ensure directories exist
 mkdir -p "$RESEARCH_DIR"
@@ -86,6 +111,8 @@ PLAN_REVIEW_ENABLED=true
 QUALITY_REVIEW_ENABLED=true
 EXPLORATION_ENABLED=true
 FETCH_SOURCE_CODE=true
+EXPLORATION_MAX_WAIT_SECONDS=3600
+EXPLORATION_FAIL_OPEN=true
 CONFIG_MAX_ITERATIONS=10
 
 if [ -f "$CONFIG_FILE" ]; then
@@ -94,6 +121,8 @@ if [ -f "$CONFIG_FILE" ]; then
   QUALITY_REVIEW_ENABLED=$(jq -r '.phases.qualityReview.enabled // true' "$CONFIG_FILE")
   EXPLORATION_ENABLED=$(jq -r '.phases.exploration.enabled // true' "$CONFIG_FILE")
   FETCH_SOURCE_CODE=$(jq -r '.phases.research.fetchSourceCode // true' "$CONFIG_FILE")
+  EXPLORATION_MAX_WAIT_SECONDS=$(jq -r '.phases.exploration.maxWaitSeconds // 3600' "$CONFIG_FILE")
+  EXPLORATION_FAIL_OPEN=$(jq -r '.phases.exploration.failOpenOnEvaluationError // true' "$CONFIG_FILE")
   CONFIG_MAX_ITERATIONS=$(jq -r '.safeguards.maxIterationsPerStory // 10' "$CONFIG_FILE")
 fi
 
@@ -214,6 +243,7 @@ run_exploration() {
   local approaches="$3"
 
   echo "Starting parallel exploration for: $topic"
+  record_skill_usage "parallel-explore"
 
   local explore_args="explore \"$topic\""
   if [ -n "$approaches" ]; then
@@ -233,10 +263,11 @@ run_exploration() {
     echo "Waiting for explorations to complete..."
 
     # Wait for all explorations to complete (check every 30 seconds)
-    local max_wait=3600  # 1 hour max
+    local max_wait="$EXPLORATION_MAX_WAIT_SECONDS"
     local waited=0
+    local all_done=false
     while [ $waited -lt $max_wait ]; do
-      local all_done=true
+      all_done=true
       for status_file in "$WORKTREES_DIR/$task_id"/*/exploration.status; do
         if [ -f "$status_file" ]; then
           local status=$(cat "$status_file")
@@ -256,19 +287,61 @@ run_exploration() {
       waited=$((waited + 30))
     done
 
+    if [ "$all_done" != "true" ]; then
+      echo "Warning: Exploration wait timed out after ${max_wait}s for task $task_id"
+    fi
+
     # Evaluate results
     echo "Evaluating exploration results..."
     local eval_args="evaluate $task_id"
     if [[ "$WORKSPACE_MODE" == "true" ]]; then
       eval_args="$eval_args --workspace $WORKSPACE_ROOT"
     fi
+    set +e
     "$SCRIPT_DIR/parallel-explorer.sh" $eval_args
+    local eval_exit=$?
+    set -e
+
+    local result_file="$EXPLORATION_DIR/${story_id}-${topic//[^a-zA-Z0-9]/-}.md"
+    if [ $eval_exit -ne 0 ]; then
+      echo "Warning: Exploration evaluation failed for $task_id (exit=$eval_exit)."
+      if [ "$EXPLORATION_FAIL_OPEN" = "true" ]; then
+        cat > "$result_file" << EOF
+# Exploration Fallback
+
+Task: $task_id
+Story: $story_id
+Topic: $topic
+
+Evaluation command failed with exit code: $eval_exit
+Exploration marked complete with fallback to keep unattended execution moving.
+Inspect worktree outputs under: $WORKTREES_DIR/$task_id
+EOF
+        echo "Exploration fallback result saved: $result_file"
+        return 0
+      fi
+      return 1
+    fi
 
     # Save exploration result
-    local result_file="$EXPLORATION_DIR/${story_id}-${topic//[^a-zA-Z0-9]/-}.md"
     if [ -f "$WORKTREES_DIR/$task_id/evaluation/FINAL_RECOMMENDATION.md" ]; then
       cp "$WORKTREES_DIR/$task_id/evaluation/FINAL_RECOMMENDATION.md" "$result_file"
       echo "Exploration result saved: $result_file"
+    elif [ "$EXPLORATION_FAIL_OPEN" = "true" ]; then
+      cat > "$result_file" << EOF
+# Exploration Fallback
+
+Task: $task_id
+Story: $story_id
+Topic: $topic
+
+Evaluation completed without FINAL_RECOMMENDATION.md output.
+Exploration marked complete with fallback to avoid unattended stall.
+EOF
+      echo "Exploration fallback result saved: $result_file"
+    else
+      echo "Warning: Missing FINAL_RECOMMENDATION.md for $task_id"
+      return 1
     fi
 
     return 0
@@ -299,14 +372,93 @@ mark_exploration_complete() {
 run_ai_tool() {
   local prompt_file="$1"
   local output=""
+  local status=0
+
+  # Build a per-call prompt that includes runtime paths. This reduces ambiguity in
+  # workspace mode (where .aha-loop/ contains prd/progress/research state).
+  local combined_prompt_file=""
+  combined_prompt_file=$(mktemp)
+  cat > "$combined_prompt_file" << EOF
+## Runtime Context
+
+- Tool: $TOOL
+- Phase: $PHASE
+- Workspace Mode: $WORKSPACE_MODE
+- Workspace Root: $WORKSPACE_ROOT
+- Aha Loop Dir: $AHA_LOOP_DIR
+
+Key files/directories:
+- prd.json: $PRD_FILE
+- progress.txt: $PROGRESS_FILE
+- research/: $RESEARCH_DIR
+- exploration/: $EXPLORATION_DIR
+- knowledge/: $KNOWLEDGE_DIR
+- logs/: $LOGS_DIR
+
+Current story hint (still verify in prd.json):
+- NEXT_STORY: ${NEXT_STORY:-<unset>}
+
+---
+
+EOF
+  cat "$prompt_file" >> "$combined_prompt_file"
   
   if [[ "$TOOL" == "amp" ]]; then
-    output=$(cat "$prompt_file" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr) || true
+    output=$(cat "$combined_prompt_file" | amp --dangerously-allow-all 2>&1)
+    status=$?
+  elif [[ "$TOOL" == "codex" ]]; then
+    local codex_cmd=(codex)
+
+    # Global options must come before the subcommand.
+    if [ -n "$CODEX_APPROVAL" ]; then
+      codex_cmd+=(-a "$CODEX_APPROVAL")
+    fi
+    if [ -n "$CODEX_PROFILE" ]; then
+      codex_cmd+=(-p "$CODEX_PROFILE")
+    fi
+
+    # Windows note (codex-cli 0.99.0): workspace-write sandbox currently requires
+    # enabling experimental windows sandboxing.
+    local uname_s=""
+    uname_s=$(uname -s 2>/dev/null || echo "")
+    case "$uname_s" in
+      MINGW*|MSYS*|CYGWIN*)
+        if [ "$CODEX_SANDBOX" = "workspace-write" ]; then
+          codex_cmd+=(-c "features.experimental_windows_sandbox=true")
+          codex_cmd+=(-c "suppress_unstable_features_warning=true")
+        fi
+        ;;
+    esac
+
+    codex_cmd+=(exec --sandbox "$CODEX_SANDBOX" -C "$WORKSPACE_ROOT")
+
+    if [ -n "$CODEX_FLAGS" ]; then
+      # shellcheck disable=SC2206
+      local extra_flags=($CODEX_FLAGS)
+      codex_cmd+=("${extra_flags[@]}")
+    fi
+
+    output=$(cat "$combined_prompt_file" | "${codex_cmd[@]}" - 2>&1)
+    status=$?
   else
-    output=$(claude --dangerously-skip-permissions --print < "$prompt_file" 2>&1 | tee /dev/stderr) || true
+    output=$(claude --dangerously-skip-permissions --print < "$combined_prompt_file" 2>&1)
+    status=$?
   fi
+
+  rm -f "$combined_prompt_file" 2>/dev/null || true
   
+  echo "$output" >&2
   echo "$output"
+  return $status
+}
+
+# Helper: Record skill usage for maintenance metrics
+record_skill_usage() {
+  local skill_name="$1"
+  if [ -z "$skill_name" ]; then
+    return
+  fi
+  AHA_SKILL_PROVIDER="$TOOL" "$SCRIPT_DIR/skill-manager.sh" use "$skill_name" >/dev/null 2>&1 || true
 }
 
 # Helper: Build directives context for AI
@@ -384,6 +536,13 @@ echo "========================================"
 echo "  Aha Loop v2 - Autonomous Development"
 echo "========================================"
 echo "Tool: $TOOL"
+if [[ "$TOOL" == "codex" ]]; then
+  echo "Codex Sandbox: $CODEX_SANDBOX"
+  echo "Codex Approval: $CODEX_APPROVAL"
+  if [ -n "$CODEX_PROFILE" ]; then
+    echo "Codex Profile: $CODEX_PROFILE"
+  fi
+fi
 echo "Phase: $PHASE"
 echo "Max Iterations: $MAX_ITERATIONS"
 if [[ "$WORKSPACE_MODE" == "true" ]]; then
@@ -430,7 +589,6 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   if [ -z "$NEXT_STORY" ]; then
     echo ""
     echo "All stories complete!"
-    echo "<promise>COMPLETE</promise>"
     exit 0
   fi
   
@@ -451,14 +609,18 @@ for i in $(seq 1 $MAX_ITERATIONS); do
       fi
       
       # Run research phase
-      if [[ "$TOOL" == "amp" ]]; then
-        OUTPUT=$(cat "$SCRIPT_DIR/prompt.md" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr) || true
-      else
-        OUTPUT=$(claude --dangerously-skip-permissions --print < "$SCRIPT_DIR/CLAUDE.md" 2>&1 | tee /dev/stderr) || true
+      record_skill_usage "research"
+      set +e
+      OUTPUT=$(run_ai_tool "$PROMPT_FILE")
+      AI_EXIT=$?
+      set -e
+      if [ $AI_EXIT -ne 0 ]; then
+        echo ""
+        echo "Research phase failed (tool exit: $AI_EXIT). Stopping for safety."
+        exit 1
       fi
       
-      # Check for completion
-      if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then
+      if [ -z "$(get_next_story)" ]; then
         echo ""
         echo "Aha Loop completed all tasks!"
         exit 0
@@ -516,14 +678,19 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     if [ -f "$RESEARCH_FILE" ] || [ -n "$EXPLORATION_FILES" ]; then
       echo ""
       echo "--- Phase 3: Plan Review ---"
+      record_skill_usage "plan-review"
       
-      if [[ "$TOOL" == "amp" ]]; then
-        OUTPUT=$(cat "$SCRIPT_DIR/prompt.md" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr) || true
-      else
-        OUTPUT=$(claude --dangerously-skip-permissions --print < "$SCRIPT_DIR/CLAUDE.md" 2>&1 | tee /dev/stderr) || true
+      set +e
+      OUTPUT=$(run_ai_tool "$PROMPT_FILE")
+      AI_EXIT=$?
+      set -e
+      if [ $AI_EXIT -ne 0 ]; then
+        echo ""
+        echo "Plan review phase failed (tool exit: $AI_EXIT). Stopping for safety."
+        exit 1
       fi
       
-      if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then
+      if [ -z "$(get_next_story)" ]; then
         echo ""
         echo "Aha Loop completed all tasks!"
         exit 0
@@ -539,13 +706,17 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     echo ""
     echo "--- Phase 4: Implementation ---"
     
-    if [[ "$TOOL" == "amp" ]]; then
-      OUTPUT=$(cat "$SCRIPT_DIR/prompt.md" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr) || true
-    else
-      OUTPUT=$(claude --dangerously-skip-permissions --print < "$SCRIPT_DIR/CLAUDE.md" 2>&1 | tee /dev/stderr) || true
+    set +e
+    OUTPUT=$(run_ai_tool "$PROMPT_FILE")
+    AI_EXIT=$?
+    set -e
+    if [ $AI_EXIT -ne 0 ]; then
+      echo ""
+      echo "Implementation phase failed (tool exit: $AI_EXIT). Stopping for safety."
+      exit 1
     fi
     
-    if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then
+    if [ -z "$(get_next_story)" ]; then
       echo ""
       echo "Aha Loop completed all tasks!"
       exit 0

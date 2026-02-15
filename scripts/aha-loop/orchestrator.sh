@@ -30,6 +30,8 @@ TOOL="claude"
 PHASE="all"
 MAX_PRDS=999
 MAX_ITERATIONS=10
+SINGLE_INSTANCE_LOCK=true
+LOCK_STALE_SECONDS=7200
 CODEX_PROFILE="${AHA_CODEX_PROFILE:-}"
 CODEX_SANDBOX="${AHA_CODEX_SANDBOX:-workspace-write}"
 CODEX_APPROVAL="${AHA_CODEX_APPROVAL:-never}"
@@ -39,6 +41,9 @@ EXPLORE_TASK=""
 MAINTENANCE=false
 INIT_WORKSPACE=""
 CLI_WORKSPACE=""
+ORCH_LOCK_HELD=false
+ORCH_CURRENT_PHASE="init"
+ORCH_CURRENT_PRD=""
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -111,7 +116,7 @@ while [[ $# -gt 0 ]]; do
       echo "Options:"
       echo "  --tool amp|claude|codex    AI tool to use (default: claude)"
       echo "  --phase PHASE        Phase to run (vision|architect|roadmap|execute|all)"
-      echo "  --max-prds N         Maximum PRDs to execute per run (default: 999)"
+      echo "  --max-prds N|all     Maximum PRDs to execute per run (default: 999)"
       echo "  --max-iterations N   Maximum iterations per PRD (default: 10)"
       echo "  --build-vision       Interactive vision building"
       echo "  --explore TASK       Start parallel exploration for a task"
@@ -152,6 +157,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Preserve parsed CLI values so config can fill defaults only when not overridden.
+MAX_PRDS_CLI="$MAX_PRDS"
+MAX_ITERATIONS_CLI="$MAX_ITERATIONS"
+
 # Handle --init-workspace first (before path initialization)
 if [[ -n "$INIT_WORKSPACE" ]]; then
   # Resolve to absolute path
@@ -191,6 +200,11 @@ mkdir -p "$RESEARCH_DIR"
 mkdir -p "$EXPLORATION_DIR"
 mkdir -p "$ARCHIVE_DIR"
 mkdir -p "$TASKS_DIR"
+mkdir -p "$AHA_LOOP_DIR/locks"
+
+LOCKS_DIR="$AHA_LOOP_DIR/locks"
+ORCH_LOCK_PATH="$LOCKS_DIR/orchestrator.lock"
+ORCH_HEARTBEAT_FILE="$LOGS_DIR/orchestrator-heartbeat.json"
 
 # Validate tool
 if [[ "$TOOL" != "amp" && "$TOOL" != "claude" && "$TOOL" != "codex" ]]; then
@@ -219,6 +233,8 @@ CONFIG_MAX_ITERATIONS=10
 if [ -f "$CONFIG_FILE" ]; then
   CONFIG_MAX_PRDS=$(jq -r '.orchestrator.maxPRDsPerRun // 999' "$CONFIG_FILE")
   CONFIG_MAX_ITERATIONS=$(jq -r '.safeguards.maxIterationsPerStory // 10' "$CONFIG_FILE")
+  SINGLE_INSTANCE_LOCK=$(jq -r '.orchestrator.singleInstanceLock // true' "$CONFIG_FILE")
+  LOCK_STALE_SECONDS=$(jq -r '.orchestrator.lockStaleSeconds // 7200' "$CONFIG_FILE")
   OBSERVABILITY_ENABLED=$(jq -r '.observability.enabled // true' "$CONFIG_FILE")
   PARALLEL_ENABLED=$(jq -r '.parallelExploration.enabled // true' "$CONFIG_FILE")
   DOC_MAINTENANCE_ENABLED=$(jq -r '.docMaintenance.enabled // true' "$CONFIG_FILE")
@@ -229,11 +245,25 @@ else
 fi
 
 # Apply config values only if not overridden by command line (still at default)
-if [ "$MAX_PRDS" -eq 999 ] && [ "$CONFIG_MAX_PRDS" != "999" ] && [ "$CONFIG_MAX_PRDS" != "10" ]; then
+if [ "$MAX_PRDS_CLI" = "999" ] && [ "$CONFIG_MAX_PRDS" != "999" ] && [ "$CONFIG_MAX_PRDS" != "10" ]; then
   MAX_PRDS="$CONFIG_MAX_PRDS"
 fi
-if [ "$MAX_ITERATIONS" -eq 10 ] && [ "$CONFIG_MAX_ITERATIONS" != "10" ]; then
+if [ "$MAX_ITERATIONS_CLI" = "10" ] && [ "$CONFIG_MAX_ITERATIONS" != "10" ]; then
   MAX_ITERATIONS="$CONFIG_MAX_ITERATIONS"
+fi
+
+if [ "$MAX_PRDS" = "all" ]; then
+  MAX_PRDS=2147483647
+fi
+
+if ! [[ "$MAX_PRDS" =~ ^[0-9]+$ ]]; then
+  echo "Error: --max-prds must be a number or 'all' (got: $MAX_PRDS)"
+  exit 1
+fi
+
+if ! [[ "$MAX_ITERATIONS" =~ ^[0-9]+$ ]]; then
+  echo "Error: --max-iterations must be a number (got: $MAX_ITERATIONS)"
+  exit 1
 fi
 
 # Helper: Check for critical directives from God Committee
@@ -343,6 +373,135 @@ build_directives_context() {
   
   echo -e "$context"
 }
+
+# Helper: Write a heartbeat JSON snapshot for unattended monitoring.
+write_orchestrator_heartbeat() {
+  local status="$1"
+  local message="${2:-}"
+  local exit_code="${3:-0}"
+  local ts
+  ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+  local pending_prds="null"
+  if [ -f "$ROADMAP_FILE" ]; then
+    pending_prds=$(jq '[.milestones[].prds[] | select(.status == "pending" or .status == "in_progress")] | length' "$ROADMAP_FILE" 2>/dev/null || echo "null")
+    if ! [[ "$pending_prds" =~ ^[0-9]+$ ]]; then
+      pending_prds="null"
+    fi
+  fi
+
+  jq -n \
+    --arg ts "$ts" \
+    --arg status "$status" \
+    --arg phase "$ORCH_CURRENT_PHASE" \
+    --arg prd "$ORCH_CURRENT_PRD" \
+    --arg workspace "$WORKSPACE_ROOT" \
+    --arg message "$message" \
+    --arg tool "$TOOL" \
+    --argjson pid "$$" \
+    --argjson exitCode "$exit_code" \
+    --argjson pendingPrds "$pending_prds" \
+    '{
+      timestamp: $ts,
+      status: $status,
+      phase: $phase,
+      currentPrd: (if $prd == "" then null else $prd end),
+      tool: $tool,
+      workspace: $workspace,
+      pid: $pid,
+      pendingPrds: $pendingPrds,
+      exitCode: $exitCode,
+      message: $message
+    }' > "${ORCH_HEARTBEAT_FILE}.tmp" 2>/dev/null && mv "${ORCH_HEARTBEAT_FILE}.tmp" "$ORCH_HEARTBEAT_FILE" || true
+}
+
+# Helper: Acquire single-instance lock for orchestrator.
+acquire_orchestrator_lock() {
+  if [ "$SINGLE_INSTANCE_LOCK" != "true" ]; then
+    return 0
+  fi
+
+  local now
+  now=$(date +%s)
+
+  if mkdir "$ORCH_LOCK_PATH" 2>/dev/null; then
+    echo "$$" > "$ORCH_LOCK_PATH/pid"
+    echo "$now" > "$ORCH_LOCK_PATH/started_at_epoch"
+    ORCH_LOCK_HELD=true
+    return 0
+  fi
+
+  local existing_pid=""
+  local started_at=""
+  if [ -f "$ORCH_LOCK_PATH/pid" ]; then
+    existing_pid=$(cat "$ORCH_LOCK_PATH/pid" 2>/dev/null || true)
+  fi
+  if [ -f "$ORCH_LOCK_PATH/started_at_epoch" ]; then
+    started_at=$(cat "$ORCH_LOCK_PATH/started_at_epoch" 2>/dev/null || true)
+  fi
+
+  if [ -n "$existing_pid" ] && kill -0 "$existing_pid" 2>/dev/null; then
+    echo "Another orchestrator instance is already running (pid=$existing_pid)."
+    write_orchestrator_heartbeat "blocked" "Single-instance lock held by pid=$existing_pid" 0
+    return 1
+  fi
+
+  if [ -z "$existing_pid" ] && [[ "$started_at" =~ ^[0-9]+$ ]]; then
+    local age=$((now - started_at))
+    if [ "$age" -lt "$LOCK_STALE_SECONDS" ]; then
+      echo "Orchestrator lock exists without pid and is not stale yet (${age}s < ${LOCK_STALE_SECONDS}s)."
+      write_orchestrator_heartbeat "blocked" "Lock exists and is not stale yet" 0
+      return 1
+    fi
+  fi
+
+  echo "Reclaiming stale orchestrator lock..."
+  rm -rf "$ORCH_LOCK_PATH" 2>/dev/null || true
+  if mkdir "$ORCH_LOCK_PATH" 2>/dev/null; then
+    echo "$$" > "$ORCH_LOCK_PATH/pid"
+    echo "$now" > "$ORCH_LOCK_PATH/started_at_epoch"
+    ORCH_LOCK_HELD=true
+    return 0
+  fi
+
+  echo "Failed to acquire orchestrator lock."
+  write_orchestrator_heartbeat "blocked" "Failed to acquire lock" 1
+  return 1
+}
+
+release_orchestrator_lock() {
+  if [ "$ORCH_LOCK_HELD" = "true" ] && [ -d "$ORCH_LOCK_PATH" ]; then
+    rm -rf "$ORCH_LOCK_PATH" 2>/dev/null || true
+    ORCH_LOCK_HELD=false
+  fi
+}
+
+on_orchestrator_signal() {
+  ORCH_CURRENT_PHASE="signal"
+  write_orchestrator_heartbeat "interrupted" "Orchestrator interrupted by signal" 130
+  release_orchestrator_lock
+  trap - EXIT
+  exit 130
+}
+
+on_orchestrator_exit() {
+  local exit_code="$1"
+  if [ "$exit_code" -eq 0 ]; then
+    write_orchestrator_heartbeat "complete" "Orchestrator finished successfully" "$exit_code"
+  else
+    write_orchestrator_heartbeat "failed" "Orchestrator exited with error" "$exit_code"
+  fi
+  release_orchestrator_lock
+}
+
+if ! acquire_orchestrator_lock; then
+  exit 0
+fi
+
+trap on_orchestrator_signal INT TERM
+trap 'on_orchestrator_exit $?' EXIT
+ORCH_CURRENT_PHASE="startup"
+write_orchestrator_heartbeat "running" "Orchestrator starting" 0
 
 # Print header
 echo "========================================"
@@ -783,6 +942,8 @@ Starting parallel exploration to find the best approach."
 run_maintenance() {
   echo "=== Maintenance Tasks ==="
   echo ""
+  ORCH_CURRENT_PHASE="maintenance"
+  write_orchestrator_heartbeat "running" "Running maintenance tasks" 0
   
   log_thought "Maintenance" "Starting" "Running scheduled maintenance tasks."
   
@@ -819,6 +980,8 @@ run_maintenance() {
 run_vision_phase() {
   echo "=== Phase 1: Vision Analysis ==="
   echo ""
+  ORCH_CURRENT_PHASE="vision"
+  write_orchestrator_heartbeat "running" "Running vision phase" 0
   
   # Check for vision file
   if [ ! -f "$VISION_FILE" ]; then
@@ -882,6 +1045,8 @@ run_architect_phase() {
   echo ""
   echo "=== Phase 2: Architecture Design ==="
   echo ""
+  ORCH_CURRENT_PHASE="architect"
+  write_orchestrator_heartbeat "running" "Running architect phase" 0
   
   # Check prerequisites
   if [ ! -f "$VISION_ANALYSIS" ]; then
@@ -926,6 +1091,8 @@ run_roadmap_phase() {
   echo ""
   echo "=== Phase 3: Roadmap Planning ==="
   echo ""
+  ORCH_CURRENT_PHASE="roadmap"
+  write_orchestrator_heartbeat "running" "Running roadmap phase" 0
   
   # Check prerequisites
   if [ ! -f "$ARCHITECTURE_FILE" ]; then
@@ -983,6 +1150,8 @@ run_execute_phase() {
   echo ""
   echo "=== Phase 4: PRD Execution ==="
   echo ""
+  ORCH_CURRENT_PHASE="execute"
+  write_orchestrator_heartbeat "running" "Running execute phase" 0
   
   # Check prerequisites
   if [ ! -f "$ROADMAP_FILE" ]; then
@@ -1014,6 +1183,8 @@ run_execute_phase() {
     fi
 
     if [ -z "$current_prd" ]; then
+      ORCH_CURRENT_PRD=""
+      write_orchestrator_heartbeat "running" "Checking for next pending PRD" 0
       if has_pending_task_docs; then
         echo "Roadmap has no pending PRDs, but task docs still show pending work."
         echo "Run roadmap phase to reconcile .md task status with project.roadmap.json."
@@ -1047,6 +1218,7 @@ run_execute_phase() {
       fi
 
       echo "No pending PRDs found. Project may be complete!"
+      write_orchestrator_heartbeat "running" "No pending PRDs found; finalizing project status" 0
       echo ""
       echo "=========================================="
       echo "  PROJECT COMPLETE!"
@@ -1071,6 +1243,8 @@ All milestones and PRDs have been completed successfully."
     
     echo "Executing PRD: $current_prd"
     echo ""
+    ORCH_CURRENT_PRD="$current_prd"
+    write_orchestrator_heartbeat "running" "Executing PRD $current_prd" 0
     
     log_thought "$current_prd" "Starting" "### PRD Execution Starting
 
@@ -1117,6 +1291,8 @@ ${directives_ctx}"
           echo "PRD $current_prd already complete in prd.json; reconciling roadmap/task status."
           mark_prd_completed_in_roadmap "$current_prd" "$full_prd_file" "Reconciled from already-complete prd.json state"
           prds_executed=$((prds_executed + 1))
+          ORCH_CURRENT_PRD=""
+          write_orchestrator_heartbeat "running" "Reconciled already-complete PRD $current_prd" 0
           echo ""
           continue
         fi
@@ -1221,6 +1397,8 @@ ${directives_ctx}"
 
       echo "PRD $current_prd completed successfully!"
       mark_prd_completed_in_roadmap "$current_prd" "$full_prd_file" "PRD completed successfully"
+      ORCH_CURRENT_PRD=""
+      write_orchestrator_heartbeat "running" "PRD $current_prd completed" 0
 
       # Merge completed PRD branch back to default branch
       if [ -f "$PRD_FILE" ]; then
@@ -1306,6 +1484,7 @@ ${workspace_ctx}"
       log_thought "$current_prd" "Failed" "### PRD Execution Failed
 
 PRD $current_prd did not complete successfully. Check $PROGRESS_FILE for details."
+      write_orchestrator_heartbeat "failed" "PRD $current_prd failed" "$aha_loop_exit"
       exit 1
     fi
     

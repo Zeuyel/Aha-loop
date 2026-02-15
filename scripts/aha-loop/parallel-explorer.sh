@@ -22,6 +22,8 @@ source "$SCRIPT_DIR/lib/paths.sh"
 TOOL="claude"
 MAX_CONCURRENT=10
 EVALUATION_AGENTS=3
+EVALUATION_TIMEOUT_SECONDS=900
+EXPLORATION_TIMEOUT_SECONDS=3600
 CLI_WORKSPACE=""
 CODEX_SANDBOX="${AHA_CODEX_SANDBOX:-workspace-write}"
 CODEX_APPROVAL="${AHA_CODEX_APPROVAL:-never}"
@@ -58,6 +60,8 @@ if [ -f "$CONFIG_FILE" ]; then
   # Use WORKTREES_DIR from paths.sh instead of constructing it
   MAX_CONCURRENT=$(jq -r '.parallelExploration.maxConcurrent // 10' "$CONFIG_FILE")
   EVALUATION_AGENTS=$(jq -r '.parallelExploration.evaluationAgents // 3' "$CONFIG_FILE")
+  EVALUATION_TIMEOUT_SECONDS=$(jq -r '.parallelExploration.evaluationTimeoutSeconds // 900' "$CONFIG_FILE")
+  EXPLORATION_TIMEOUT_SECONDS=$(jq -r '.parallelExploration.explorationTimeoutSeconds // .phases.exploration.maxWaitSeconds // 3600' "$CONFIG_FILE")
 fi
 
 # Use WORKTREES_DIR from paths.sh
@@ -149,6 +153,64 @@ run_codex_exec() {
   echo "$prompt" | "${codex_cmd[@]}" -
 }
 
+# Run one AI prompt to a file with a hard timeout.
+# This prevents unattended flows from hanging forever in evaluation/synthesis.
+run_ai_to_file_with_timeout() {
+  local tool="$1"
+  local prompt="$2"
+  local workdir="$3"
+  local outfile="$4"
+  local timeout_s="$5"
+
+  local tmp_out="${outfile}.tmp"
+  rm -f "$tmp_out" 2>/dev/null || true
+  : > "$tmp_out"
+
+  (
+    if [[ "$tool" == "amp" ]]; then
+      echo "$prompt" | amp --dangerously-allow-all > "$tmp_out" 2>/dev/null
+    elif [[ "$tool" == "codex" ]]; then
+      run_codex_exec "$prompt" "$workdir" > "$tmp_out" 2>/dev/null
+    else
+      echo "$prompt" | claude --dangerously-skip-permissions --print > "$tmp_out" 2>/dev/null
+    fi
+  ) &
+  local pid=$!
+
+  local waited=0
+  while kill -0 "$pid" 2>/dev/null; do
+    if [ "$waited" -ge "$timeout_s" ]; then
+      kill "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null || true
+      echo "Timed out after ${timeout_s}s." > "$outfile"
+      rm -f "$tmp_out" 2>/dev/null || true
+      return 124
+    fi
+    sleep 2
+    waited=$((waited + 2))
+  done
+
+  local rc=0
+  if wait "$pid"; then
+    rc=0
+  else
+    rc=$?
+  fi
+
+  if [ $rc -eq 0 ] && [ -s "$tmp_out" ]; then
+    mv "$tmp_out" "$outfile"
+    return 0
+  fi
+
+  if [ -s "$tmp_out" ]; then
+    mv "$tmp_out" "$outfile"
+  else
+    echo "AI command failed (exit ${rc})." > "$outfile"
+  fi
+  rm -f "$tmp_out" 2>/dev/null || true
+  return $rc
+}
+
 # Generate unique task ID
 generate_task_id() {
   local task_name="$1"
@@ -226,16 +288,18 @@ When done, the EXPLORATION_RESULT.md should be complete."
 
   # Run the AI in the worktree directory
   cd "$worktree_path"
-  
-  if [[ "$tool" == "amp" ]]; then
-    echo "$prompt" | amp --dangerously-allow-all >> "$log_file" 2>&1
-  elif [[ "$tool" == "codex" ]]; then
-    run_codex_exec "$prompt" "$worktree_path" >> "$log_file" 2>&1
-  else
-    echo "$prompt" | claude --dangerously-skip-permissions >> "$log_file" 2>&1
+
+  local ai_output_file="${worktree_path}/.exploration-ai-output.txt"
+  local exit_code=0
+  if ! run_ai_to_file_with_timeout "$tool" "$prompt" "$worktree_path" "$ai_output_file" "$EXPLORATION_TIMEOUT_SECONDS"; then
+    exit_code=$?
+    echo "Exploration command timed out/failed for '$approach' (exit=${exit_code})." >> "$log_file"
   fi
-  
-  local exit_code=$?
+
+  if [ -s "$ai_output_file" ]; then
+    cat "$ai_output_file" >> "$log_file"
+    rm -f "$ai_output_file" 2>/dev/null || true
+  fi
   
   if [ $exit_code -eq 0 ] && [ -f "EXPLORATION_RESULT.md" ]; then
     echo "completed" > "$status_file"
@@ -496,13 +560,8 @@ Output your evaluation as a structured report."
   
   for i in $(seq 1 $EVALUATION_AGENTS); do
     echo "Agent $i evaluating..."
-    
-    if [[ "$eval_tool" == "amp" ]]; then
-      echo "$eval_prompt" | amp --dangerously-allow-all > "${eval_dir}/agent-${i}.md" 2>/dev/null
-    elif [[ "$eval_tool" == "codex" ]]; then
-      run_codex_exec "$eval_prompt" "$task_dir" > "${eval_dir}/agent-${i}.md" 2>/dev/null
-    else
-      echo "$eval_prompt" | claude --dangerously-skip-permissions --print > "${eval_dir}/agent-${i}.md" 2>/dev/null
+    if ! run_ai_to_file_with_timeout "$eval_tool" "$eval_prompt" "$task_dir" "${eval_dir}/agent-${i}.md" "$EVALUATION_TIMEOUT_SECONDS"; then
+      echo "Warning: Agent $i evaluation timed out/failed; continuing."
     fi
   done
   
@@ -520,12 +579,15 @@ Synthesize these evaluations into a final recommendation:
 3. Final recommended approach (or combination)
 4. Specific merge strategy if combining approaches"
 
-  if [[ "$eval_tool" == "amp" ]]; then
-    echo "$synth_prompt" | amp --dangerously-allow-all > "${eval_dir}/FINAL_RECOMMENDATION.md" 2>/dev/null
-  elif [[ "$eval_tool" == "codex" ]]; then
-    run_codex_exec "$synth_prompt" "$task_dir" > "${eval_dir}/FINAL_RECOMMENDATION.md" 2>/dev/null
-  else
-    echo "$synth_prompt" | claude --dangerously-skip-permissions --print > "${eval_dir}/FINAL_RECOMMENDATION.md" 2>/dev/null
+  if ! run_ai_to_file_with_timeout "$eval_tool" "$synth_prompt" "$task_dir" "${eval_dir}/FINAL_RECOMMENDATION.md" "$EVALUATION_TIMEOUT_SECONDS"; then
+    cat > "${eval_dir}/FINAL_RECOMMENDATION.md" << EOF
+# FINAL RECOMMENDATION (Fallback)
+
+Evaluation synthesis did not complete within timeout (${EVALUATION_TIMEOUT_SECONDS}s) or failed.
+Please inspect the individual evaluator outputs:
+
+$(for f in "$eval_dir"/agent-*.md; do echo "- $(basename "$f")"; done)
+EOF
   fi
   
   echo ""

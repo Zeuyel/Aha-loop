@@ -5,7 +5,9 @@
     "autoStart": true,
     "pauseOnMilestone": false,
     "maxPRDsPerRun": 10,
-    "reviewRoadmapAfterMilestone": true
+    "reviewRoadmapAfterMilestone": true,
+    "singleInstanceLock": true,
+    "lockStaleSeconds": 7200
   },
   "vision": {
     "requireAllSections": false,
@@ -37,7 +39,8 @@
       "skipIfNoTopics": true,
       "maxWaitSeconds": 3600,
       "autoEvaluate": true,
-      "autoMerge": false
+      "autoMerge": false,
+      "failOpenOnEvaluationError": true
     },
     "planReview": {
       "enabled": true,
@@ -58,6 +61,8 @@
     "unlimitedMode": true,
     "autoCleanup": true,
     "evaluationAgents": 3,
+    "evaluationTimeoutSeconds": 900,
+    "explorationTimeoutSeconds": 3600,
     "allowNestedExploration": true
   },
   "observability": {
