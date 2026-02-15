@@ -1123,42 +1123,57 @@ ${directives_ctx}"
       fi
     fi
 
-    # Convert PRD to prd.json if needed
-    echo "Converting PRD to executable format..."
-    local old_prd_state=""
+    local skip_conversion=false
     if [ -f "$PRD_FILE" ]; then
-      local existing_prd_id=""
+      local existing_prd_id existing_story_count existing_pending
       existing_prd_id=$(jq -r '.prdId // empty' "$PRD_FILE" 2>/dev/null || echo "")
-      if [ "$existing_prd_id" = "$current_prd" ]; then
-        old_prd_state=$(mktemp)
-        cp "$PRD_FILE" "$old_prd_state"
+      existing_story_count=$(jq '[.userStories[]?] | length' "$PRD_FILE" 2>/dev/null || echo "0")
+      existing_pending=$(jq '[.userStories[]? | select(.passes == false)] | length' "$PRD_FILE" 2>/dev/null || echo "-1")
+      if [ "$existing_prd_id" = "$current_prd" ] && [ "$existing_story_count" -gt 0 ] && [ "$existing_pending" -gt 0 ]; then
+        skip_conversion=true
       fi
     fi
-    local directives_ctx=$(build_directives_context "$current_prd")
-    local workspace_ctx=$(generate_workspace_context)
-    local prompt="Load the prd-converter skill from $SKILLS_DIR/prd-converter/SKILL.md. Convert $full_prd_file to $PRD_FILE format.
+
+    # Convert PRD to prd.json unless we are resuming an in-progress PRD.
+    if [ "$skip_conversion" = true ]; then
+      echo "Reusing existing in-progress prd.json for $current_prd (skip reconversion)."
+    else
+      echo "Converting PRD to executable format..."
+      local old_prd_state=""
+      if [ -f "$PRD_FILE" ]; then
+        local existing_prd_id=""
+        existing_prd_id=$(jq -r '.prdId // empty' "$PRD_FILE" 2>/dev/null || echo "")
+        if [ "$existing_prd_id" = "$current_prd" ]; then
+          old_prd_state=$(mktemp)
+          cp "$PRD_FILE" "$old_prd_state"
+        fi
+      fi
+      local directives_ctx=$(build_directives_context "$current_prd")
+      local workspace_ctx=$(generate_workspace_context)
+      local prompt="Load the prd-converter skill from $SKILLS_DIR/prd-converter/SKILL.md. Convert $full_prd_file to $PRD_FILE format.
 
 ${workspace_ctx}
 ${directives_ctx}"
-    run_ai "$prompt" "prd-converter"
+      run_ai "$prompt" "prd-converter"
 
-    if [ ! -f "$PRD_FILE" ]; then
-      echo "Error: prd.json was not generated at $PRD_FILE"
-      exit 1
-    fi
-
-    # Preserve story state when regenerating prd.json for the same PRD (resume-friendly).
-    if [ -n "$old_prd_state" ] && [ -f "$old_prd_state" ]; then
-      if jq -e . "$old_prd_state" >/dev/null 2>&1 && jq -e . "$PRD_FILE" >/dev/null 2>&1; then
-        local merged_prd_tmp
-        merged_prd_tmp=$(mktemp)
-        if merge_prd_json_state "$old_prd_state" "$PRD_FILE" "$merged_prd_tmp"; then
-          mv "$merged_prd_tmp" "$PRD_FILE"
-        else
-          rm -f "$merged_prd_tmp" 2>/dev/null || true
-        fi
+      if [ ! -f "$PRD_FILE" ]; then
+        echo "Error: prd.json was not generated at $PRD_FILE"
+        exit 1
       fi
-      rm -f "$old_prd_state" 2>/dev/null || true
+
+      # Preserve story state when regenerating prd.json for the same PRD (resume-friendly).
+      if [ -n "$old_prd_state" ] && [ -f "$old_prd_state" ]; then
+        if jq -e . "$old_prd_state" >/dev/null 2>&1 && jq -e . "$PRD_FILE" >/dev/null 2>&1; then
+          local merged_prd_tmp
+          merged_prd_tmp=$(mktemp)
+          if merge_prd_json_state "$old_prd_state" "$PRD_FILE" "$merged_prd_tmp"; then
+            mv "$merged_prd_tmp" "$PRD_FILE"
+          else
+            rm -f "$merged_prd_tmp" 2>/dev/null || true
+          fi
+        fi
+        rm -f "$old_prd_state" 2>/dev/null || true
+      fi
     fi
 
     local prd_json_id
