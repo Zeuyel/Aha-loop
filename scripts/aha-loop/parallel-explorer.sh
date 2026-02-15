@@ -23,6 +23,10 @@ TOOL="claude"
 MAX_CONCURRENT=10
 EVALUATION_AGENTS=3
 CLI_WORKSPACE=""
+CODEX_SANDBOX="${AHA_CODEX_SANDBOX:-workspace-write}"
+CODEX_APPROVAL="${AHA_CODEX_APPROVAL:-never}"
+CODEX_PROFILE="${AHA_CODEX_PROFILE:-}"
+CODEX_FLAGS="${AHA_CODEX_FLAGS:-}"
 
 # Pre-parse workspace argument before command
 ARGS=()
@@ -67,7 +71,7 @@ usage() {
   echo "Aha Loop Parallel Explorer - Git Worktree-based Parallel Exploration"
   echo ""
   echo "Usage:"
-  echo "  $0 explore TASK [--approaches LIST] [--tool amp|claude]"
+  echo "  $0 explore TASK [--approaches LIST] [--tool amp|claude|codex]"
   echo "  $0 status [TASK_ID]"
   echo "  $0 evaluate TASK_ID"
   echo "  $0 merge TASK_ID APPROACH"
@@ -85,9 +89,64 @@ usage() {
   echo "Examples:"
   echo "  $0 explore \"authentication\" --approaches \"jwt,session,oauth\""
   echo "  $0 explore \"database layer\" --tool claude"
+  echo "  $0 explore \"query cache\" --tool codex"
   echo "  $0 evaluate explore-auth-1234"
   echo "  $0 merge explore-auth-1234 jwt"
   echo "  $0 cleanup --all"
+}
+
+# Validate tool selection and availability
+validate_tool() {
+  local tool="$1"
+  if [[ "$tool" != "amp" && "$tool" != "claude" && "$tool" != "codex" ]]; then
+    echo "Error: Invalid tool '$tool'. Must be 'amp', 'claude', or 'codex'."
+    exit 1
+  fi
+  if [[ "$tool" == "codex" ]]; then
+    if ! command -v codex >/dev/null 2>&1; then
+      echo "Error: codex CLI not found in PATH. Install Codex CLI or use --tool amp|claude."
+      exit 1
+    fi
+  fi
+}
+
+# Run codex exec with safe defaults for automation.
+# Note: global options (-a/-p/-c) must come before the `exec` subcommand.
+run_codex_exec() {
+  local prompt="$1"
+  local workdir="${2:-$PWD}"
+
+  local codex_cmd=(codex)
+
+  if [ -n "$CODEX_APPROVAL" ]; then
+    codex_cmd+=(-a "$CODEX_APPROVAL")
+  fi
+  if [ -n "$CODEX_PROFILE" ]; then
+    codex_cmd+=(-p "$CODEX_PROFILE")
+  fi
+
+  # Windows note (codex-cli 0.99.0): workspace-write sandbox currently requires
+  # enabling experimental windows sandboxing.
+  local uname_s=""
+  uname_s=$(uname -s 2>/dev/null || echo "")
+  case "$uname_s" in
+    MINGW*|MSYS*|CYGWIN*)
+      if [ "$CODEX_SANDBOX" = "workspace-write" ]; then
+        codex_cmd+=(-c "features.experimental_windows_sandbox=true")
+        codex_cmd+=(-c "suppress_unstable_features_warning=true")
+      fi
+      ;;
+  esac
+
+  codex_cmd+=(exec --sandbox "$CODEX_SANDBOX" -C "$workdir")
+
+  if [ -n "$CODEX_FLAGS" ]; then
+    # shellcheck disable=SC2206
+    local extra_flags=($CODEX_FLAGS)
+    codex_cmd+=("${extra_flags[@]}")
+  fi
+
+  echo "$prompt" | "${codex_cmd[@]}" -
 }
 
 # Generate unique task ID
@@ -105,14 +164,15 @@ create_worktree() {
   local branch_name="${task_id}-${approach}"
   local worktree_path="${WORKTREE_BASE}/${task_id}/${approach}"
   
-  echo "Creating worktree for approach: $approach"
+  # Keep stdout machine-readable for command substitution callers.
+  echo "Creating worktree for approach: $approach" >&2
   
   # Create branch from current HEAD
-  git branch "$branch_name" HEAD 2>/dev/null || true
+  git branch "$branch_name" HEAD >/dev/null 2>&1 || true
   
   # Create worktree
   mkdir -p "$(dirname "$worktree_path")"
-  git worktree add "$worktree_path" "$branch_name"
+  git worktree add "$worktree_path" "$branch_name" >&2
   
   echo "$worktree_path"
 }
@@ -169,6 +229,8 @@ When done, the EXPLORATION_RESULT.md should be complete."
   
   if [[ "$tool" == "amp" ]]; then
     echo "$prompt" | amp --dangerously-allow-all >> "$log_file" 2>&1
+  elif [[ "$tool" == "codex" ]]; then
+    run_codex_exec "$prompt" "$worktree_path" >> "$log_file" 2>&1
   else
     echo "$prompt" | claude --dangerously-skip-permissions >> "$log_file" 2>&1
   fi
@@ -224,6 +286,8 @@ cmd_explore() {
     usage
     exit 1
   fi
+
+  validate_tool "$TOOL"
   
   # Generate task ID
   local task_id=$(generate_task_id "$task_description")
@@ -241,6 +305,8 @@ Example: jwt,session,oauth"
 
     if [[ "$TOOL" == "amp" ]]; then
       approaches=$(echo "$suggest_prompt" | amp --dangerously-allow-all 2>/dev/null | tail -1)
+    elif [[ "$TOOL" == "codex" ]]; then
+      approaches=$(run_codex_exec "$suggest_prompt" "$WORKSPACE_ROOT" 2>/dev/null | tail -1)
     else
       approaches=$(echo "$suggest_prompt" | claude --dangerously-skip-permissions --print 2>/dev/null | tail -1)
     fi
@@ -257,6 +323,7 @@ Example: jwt,session,oauth"
 {
   "id": "$task_id",
   "description": "$task_description",
+  "tool": "$TOOL",
   "approaches": "$(echo $approaches | tr ',' '\n' | jq -R . | jq -s .)",
   "createdAt": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
   "status": "running"
@@ -374,6 +441,17 @@ cmd_evaluate() {
   echo "Evaluating explorations for: $task_id"
   echo ""
   
+  local eval_tool="$TOOL"
+  if [ -f "${task_dir}/task.json" ]; then
+    local stored_tool
+    stored_tool=$(jq -r '.tool // empty' "${task_dir}/task.json" 2>/dev/null || true)
+    if [ -n "$stored_tool" ] && [ "$stored_tool" != "null" ]; then
+      eval_tool="$stored_tool"
+    fi
+  fi
+
+  validate_tool "$eval_tool"
+
   # Collect all exploration results
   local results=""
   
@@ -419,8 +497,10 @@ Output your evaluation as a structured report."
   for i in $(seq 1 $EVALUATION_AGENTS); do
     echo "Agent $i evaluating..."
     
-    if [[ "$TOOL" == "amp" ]]; then
+    if [[ "$eval_tool" == "amp" ]]; then
       echo "$eval_prompt" | amp --dangerously-allow-all > "${eval_dir}/agent-${i}.md" 2>/dev/null
+    elif [[ "$eval_tool" == "codex" ]]; then
+      run_codex_exec "$eval_prompt" "$task_dir" > "${eval_dir}/agent-${i}.md" 2>/dev/null
     else
       echo "$eval_prompt" | claude --dangerously-skip-permissions --print > "${eval_dir}/agent-${i}.md" 2>/dev/null
     fi
@@ -440,8 +520,10 @@ Synthesize these evaluations into a final recommendation:
 3. Final recommended approach (or combination)
 4. Specific merge strategy if combining approaches"
 
-  if [[ "$TOOL" == "amp" ]]; then
+  if [[ "$eval_tool" == "amp" ]]; then
     echo "$synth_prompt" | amp --dangerously-allow-all > "${eval_dir}/FINAL_RECOMMENDATION.md" 2>/dev/null
+  elif [[ "$eval_tool" == "codex" ]]; then
+    run_codex_exec "$synth_prompt" "$task_dir" > "${eval_dir}/FINAL_RECOMMENDATION.md" 2>/dev/null
   else
     echo "$synth_prompt" | claude --dangerously-skip-permissions --print > "${eval_dir}/FINAL_RECOMMENDATION.md" 2>/dev/null
   fi
