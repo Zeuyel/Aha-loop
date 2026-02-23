@@ -106,6 +106,13 @@ class PhaseEngine {
       `   ${PHASE_RESULT_PREFIX} {"status":"success","code":"OK","retryable":false,"message":"phase completed","artifacts":{},"nextAction":"advance"}`,
       "7) 若阶段失败，status 必须为 failed，并填写 code/message/retryable。",
       "8) 除该结构化回执外，可输出普通摘要文本。",
+      ...(task.phase === "review" && acceptanceCriteria.length > 0
+        ? [
+            "9) review 阶段且存在验收标准时，结构化回执 artifacts 必须包含 acceptanceCriteriaChecks 数组。",
+            "10) acceptanceCriteriaChecks 长度必须与 AC 数量一致；每项格式: {\"id\":\"AC1\",\"status\":\"pass\",\"evidence\":\"...\"}。",
+            "11) 仅当所有 AC 都 status=pass 时，status 才能为 success。",
+          ]
+        : []),
     ];
     return lines.join("\n");
   }

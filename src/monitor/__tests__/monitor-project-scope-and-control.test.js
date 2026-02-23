@@ -172,8 +172,38 @@ runCase("HTTP /health,/stories,/runs support projectId filter", async () => {
     assert.equal(scopedHealth.prdStatus.active, 1);
     assert.equal(scopedHealth.runStatus.running, 1);
     assert.equal(scopedHealth.storyStatus.completed, undefined);
+    assert.equal(scopedHealth.mode, "live");
+    assert.equal(scopedHealth.simulated, false);
+    assert.equal(scopedHealth.executionMode?.label, "live");
   } finally {
     await new Promise((resolve) => monitor._httpServer.close(resolve));
+  }
+});
+
+runCase("health snapshot exposes mode + simulated across live/dry-run/plan-only", async () => {
+  const scenarios = [
+    { dryRun: false, planOnly: false, mode: "live", simulated: false },
+    { dryRun: true, planOnly: false, mode: "dry-run", simulated: true },
+    { dryRun: false, planOnly: true, mode: "plan-only", simulated: true },
+    { dryRun: true, planOnly: true, mode: "dry-run", simulated: true },
+  ];
+
+  for (const scenario of scenarios) {
+    const store = new FakeStore();
+    const monitor = createMonitor(store, {
+      config: {
+        dryRun: scenario.dryRun,
+        planOnly: scenario.planOnly,
+      },
+    });
+
+    const health = await monitor.getHealthSnapshot();
+    assert.equal(health.mode, scenario.mode);
+    assert.equal(health.simulated, scenario.simulated);
+    assert.equal(health.executionMode?.label, scenario.mode);
+    assert.equal(health.executionMode?.dryRun, scenario.dryRun);
+    assert.equal(health.executionMode?.planOnly, scenario.planOnly);
+    assert.equal(health.executionMode?.simulated, scenario.simulated);
   }
 });
 

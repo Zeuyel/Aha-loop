@@ -110,6 +110,176 @@ function detectSemanticFailureFromOutput(output) {
   };
 }
 
+function normalizeAcceptanceCriteria(criteria) {
+  if (!Array.isArray(criteria)) return [];
+  return criteria
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+}
+
+function normalizeAcceptanceStatus(rawStatus) {
+  if (typeof rawStatus === "boolean") return rawStatus ? "pass" : "failed";
+  const value = String(rawStatus || "").trim().toLowerCase();
+  if (["pass", "passed", "ok", "success", "met", "done", "true"].includes(value)) return "pass";
+  if (["failed", "fail", "error", "blocked", "missing", "false"].includes(value)) return "failed";
+  return null;
+}
+
+function normalizeAcceptanceCheckItem(item, idx, fallbackId = null) {
+  const defaultId = String(fallbackId || `AC${idx + 1}`).trim() || `AC${idx + 1}`;
+  if (!item || typeof item !== "object") {
+    return {
+      id: defaultId,
+      status: null,
+      passed: false,
+      evidence: String(item || "").trim(),
+      hasIdentifier: Boolean(fallbackId),
+      hasStatus: false,
+      valid: false,
+    };
+  }
+
+  const rawId = String(item.id || item.key || item.name || "").trim();
+  const index = Number(item.index);
+  const hasIndex = Number.isInteger(index) && index >= 0;
+  const hasIdentifier = rawId.length > 0 || hasIndex || Boolean(fallbackId);
+  const id = rawId || (hasIndex ? `AC${index + 1}` : defaultId);
+  const status = normalizeAcceptanceStatus(
+    item.status ?? item.result ?? item.outcome ?? item.passed ?? item.pass,
+  );
+  const hasStatus = status !== null;
+
+  return {
+    id,
+    status,
+    passed: status === "pass",
+    evidence: String(item.evidence || item.message || item.summary || item.reason || "").trim(),
+    hasIdentifier,
+    hasStatus,
+    valid: hasIdentifier && hasStatus,
+  };
+}
+
+function collectAcceptanceChecks(phaseResult) {
+  if (!phaseResult || typeof phaseResult !== "object") return [];
+  const artifacts = phaseResult.artifacts && typeof phaseResult.artifacts === "object"
+    ? phaseResult.artifacts
+    : {};
+  const candidates = [
+    artifacts.acceptanceCriteriaChecks,
+    artifacts.acceptanceCriteriaCheck,
+    artifacts.acceptanceCriteria,
+    artifacts.criteriaCheck,
+    artifacts.criteria,
+    phaseResult.acceptanceCriteriaChecks,
+    phaseResult.acceptanceCriteriaCheck,
+    phaseResult.acceptanceCriteria,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+
+    if (Array.isArray(candidate)) {
+      return candidate.map((item, idx) => normalizeAcceptanceCheckItem(item, idx));
+    }
+
+    if (candidate && typeof candidate === "object") {
+      const entries = Object.entries(candidate);
+      if (entries.length === 0) continue;
+      return entries.map(([key, value], idx) => normalizeAcceptanceCheckItem(value, idx, key));
+    }
+  }
+
+  return [];
+}
+
+function validateAcceptanceCriteriaEvidence(task, phaseResult) {
+  const acceptanceCriteria = normalizeAcceptanceCriteria(task?.acceptanceCriteria);
+  if (acceptanceCriteria.length === 0) return null;
+
+  if (!phaseResult || typeof phaseResult !== "object") {
+    return {
+      code: "PHASE_ACCEPTANCE_EVIDENCE_MISSING",
+      source: "phase_contract",
+      message: "story with acceptanceCriteria requires structured phaseResult evidence",
+      retryable: false,
+      expectedCount: acceptanceCriteria.length,
+      actualCount: 0,
+    };
+  }
+
+  if (String(phaseResult.status || "").trim().toLowerCase() !== "success") {
+    return {
+      code: "PHASE_ACCEPTANCE_EVIDENCE_MISSING",
+      source: "phase_contract",
+      message: "phaseResult.status must be success when acceptanceCriteria exists",
+      retryable: false,
+      expectedCount: acceptanceCriteria.length,
+      actualCount: 0,
+    };
+  }
+
+  const checks = collectAcceptanceChecks(phaseResult);
+  if (checks.length === 0) {
+    return {
+      code: "PHASE_ACCEPTANCE_EVIDENCE_MISSING",
+      source: "phase_contract",
+      message: "phaseResult.artifacts.acceptanceCriteriaChecks is required when acceptanceCriteria exists",
+      retryable: false,
+      expectedCount: acceptanceCriteria.length,
+      actualCount: 0,
+    };
+  }
+
+  const missing = [];
+  const failed = [];
+  const invalid = [];
+
+  for (let idx = 0; idx < acceptanceCriteria.length; idx += 1) {
+    const check = checks[idx];
+    if (!check) {
+      missing.push(`AC${idx + 1}`);
+      continue;
+    }
+    if (!check.valid) {
+      invalid.push(check.id || `AC${idx + 1}`);
+      continue;
+    }
+    if (check.passed !== true) {
+      failed.push(check.id || `AC${idx + 1}`);
+    }
+  }
+
+  if (missing.length > 0 || invalid.length > 0) {
+    return {
+      code: "PHASE_ACCEPTANCE_EVIDENCE_INCOMPLETE",
+      source: "phase_contract",
+      message: `acceptance criteria evidence incomplete (missing=${missing.join(",") || "none"}, invalid=${invalid.join(",") || "none"})`,
+      retryable: false,
+      expectedCount: acceptanceCriteria.length,
+      actualCount: checks.length,
+      missingChecks: missing,
+      invalidChecks: invalid,
+      failedChecks: failed,
+    };
+  }
+
+  if (failed.length > 0) {
+    return {
+      code: "PHASE_ACCEPTANCE_CHECKS_FAILED",
+      source: "phase_contract",
+      message: `acceptance criteria checks failed: ${failed.join(",")}`,
+      retryable: true,
+      expectedCount: acceptanceCriteria.length,
+      actualCount: checks.length,
+      missingChecks: missing,
+      failedChecks: failed,
+    };
+  }
+
+  return null;
+}
+
 /**
  * SessionPool — 管理所有 spawn 出来的 AI agent 子进程
  * 职责: spawn / poll(存活+超时) / kill / 收集输出 / 上报结果
@@ -324,11 +494,60 @@ class SessionPool {
           return;
         }
 
+        const acceptanceCriteriaFailure = validateAcceptanceCriteriaEvidence(task, phaseResult);
+        if (acceptanceCriteriaFailure) {
+          this.logger.warn("[session-pool] acceptance criteria gate rejected phase result", {
+            event: "ac_gate_reject",
+            runId: session.runId || null,
+            storyId: session.storyId || null,
+            prdId: session.prdId || null,
+            phase: session.phase || null,
+            attempt: session.attempt || null,
+            traceId: session.traceId || null,
+            errorCode: acceptanceCriteriaFailure.code,
+            error: acceptanceCriteriaFailure.message,
+            missingChecks: acceptanceCriteriaFailure.missingChecks || [],
+            invalidChecks: acceptanceCriteriaFailure.invalidChecks || [],
+            failedChecks: acceptanceCriteriaFailure.failedChecks || [],
+          });
+          this._finalize(session.id, {
+            exitCode: result.exitCode,
+            error: acceptanceCriteriaFailure,
+            retryable: acceptanceCriteriaFailure.retryable !== false,
+            output,
+            phaseResult,
+          });
+          return;
+        }
+
         this._finalize(session.id, {
           exitCode: 0,
           error: null,
           output,
           phaseResult,
+        });
+        return;
+      }
+
+      const acceptanceCriteriaFailure = validateAcceptanceCriteriaEvidence(task, null);
+      if (acceptanceCriteriaFailure) {
+        this.logger.warn("[session-pool] acceptance criteria gate rejected unstructured success output", {
+          event: "ac_gate_missing_contract",
+          runId: session.runId || null,
+          storyId: session.storyId || null,
+          prdId: session.prdId || null,
+          phase: session.phase || null,
+          attempt: session.attempt || null,
+          traceId: session.traceId || null,
+          errorCode: acceptanceCriteriaFailure.code,
+          error: acceptanceCriteriaFailure.message,
+        });
+        this._finalize(session.id, {
+          exitCode: result.exitCode,
+          error: acceptanceCriteriaFailure,
+          retryable: acceptanceCriteriaFailure.retryable !== false,
+          output,
+          phaseResult: null,
         });
         return;
       }
@@ -704,4 +923,4 @@ class SessionPool {
   }
 }
 
-module.exports = { SessionPool, detectSemanticFailureFromOutput };
+module.exports = { SessionPool, detectSemanticFailureFromOutput, validateAcceptanceCriteriaEvidence };

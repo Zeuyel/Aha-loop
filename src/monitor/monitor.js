@@ -274,10 +274,14 @@ class Monitor {
 
     const schedulerAlive = this._isAlive(this.heartbeats.schedulerAt);
     const workerAlive = this._isAlive(this.heartbeats.workerAt);
+    const executionMode = this._buildExecutionMode();
 
     return {
       timestamp: nowEast8Iso(),
       queue,
+      mode: executionMode.label,
+      simulated: executionMode.simulated,
+      executionMode,
       service: {
         alive: true,
         available: Boolean(queue.ok && schedulerAlive && workerAlive),
@@ -309,6 +313,23 @@ class Monitor {
         last15m: this._windowLatency(15 * 60_000),
       },
       uptimeMs: this.stats.startedAt ? Date.now() - Date.parse(this.stats.startedAt) : 0,
+    };
+  }
+
+  _buildExecutionMode() {
+    const dryRun = Boolean(this.config?.dryRun);
+    const planOnly = Boolean(this.config?.planOnly);
+    const simulated = dryRun || planOnly;
+
+    let label = "live";
+    if (dryRun) label = "dry-run";
+    else if (planOnly) label = "plan-only";
+
+    return {
+      dryRun,
+      planOnly,
+      simulated,
+      label,
     };
   }
 

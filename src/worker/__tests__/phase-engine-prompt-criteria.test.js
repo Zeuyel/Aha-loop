@@ -45,3 +45,18 @@ runCase("buildPrompt has explicit fallback when acceptance criteria missing", ()
 
   assert.match(prompt, /验收标准: 未提供/);
 });
+
+runCase("buildPrompt requires acceptanceCriteriaCheck contract for review", () => {
+  const engine = new PhaseEngine({}, console);
+  const prompt = engine._buildPrompt({
+    storyId: "US-AC-003",
+    storyTitle: "Review gate",
+    prdId: "PRD-AC",
+    phase: "review",
+    worktreePath: "/tmp/wt",
+    acceptanceCriteria: ["AC-1", "AC-2"],
+  });
+
+  assert.match(prompt, /acceptanceCriteriaChecks/);
+  assert.match(prompt, /review 阶段且存在验收标准/);
+});

@@ -569,3 +569,116 @@ Collected current git/test state and prepared a concise status report covering c
 Runtime-level multi-project isolation and stricter acceptance-criteria enforcement at state transition.
 
 ---
+## 2026-02-23 22:50:20 | Task: 多-agent整改第二轮 | Phase: Starting
+
+### Context
+用户下达“开始”，进入第二轮整改执行：AC硬门禁、dryRun/planOnly可视化、多项目运行时隔离方案。
+
+### Approach
+并行启用3个worker agent分别负责：
+1) session-pool AC硬门禁与测试
+2) monitor+frontend 运行模式透明化与测试
+3) 运行时隔离方案文档与实施拆解
+
+### Potential Concerns
+第三项涉及架构级改造，先给出可落地分阶段方案，避免一次性大改引入回归。
+
+---
+## 2026-02-23 23:05:12 | Task: 多-agent整改第二轮 | Phase: Complete
+
+### Delivered
+- review 阶段 AC 硬门禁：缺失结构化回执或 AC 校验失败时，session 直接 fail + retryable。
+- phase prompt 增加 acceptanceCriteriaCheck 结构化要求。
+- monitor /health 增加 executionMode（live/dry-run/plan-only）字段，前端头部显式展示 mode。
+
+### Validation
+- node --test 全量通过（23/23）。
+
+### Remaining
+- 真正 project 级 runtime 隔离（队列/并发槽/状态命名空间）仍待实施。
+---
+## 2026-02-23 22:54:11 | Task: dryRun/planOnly 透明化 | Phase: Implementation
+
+### Context
+目标是让 /health 明确暴露运行模式（live/dry-run/plan-only）并在前端 header 显示 mode，同时保持接口兼容。
+
+### Decision Point
+- Considering: 仅保留 executionMode.label
+- Considering: 新增顶层 mode/simulated + 保留 executionMode
+- **Chosen:** 新增顶层字段并保留 executionMode
+- **Reason:** 满足“明确模式字段”且不破坏已有消费者
+
+### Next Action
+更新 monitor health payload、前端 chip-env 取值逻辑，并补测试覆盖三种模式。
+
+---
+## 2026-02-23 22:55:36 | Task: dryRun/planOnly 透明化 | Phase: Complete
+
+### Summary
+完成 /health 运行模式字段透明化与前端 header mode 展示，保持现有字段兼容，并补充 monitor 测试覆盖 live/dry-run/plan-only。
+
+### Key Decisions Made
+- 在 health 顶层新增 mode/simulated，同时保留 executionMode 对象。
+- 前端优先读取 health.mode，兼容回退 executionMode.label。
+- degraded 与请求失败场景均保留 mode 可见性（unknown fallback）。
+
+### Verification
+- node --check src/monitor/monitor.js
+- node --check src/public/app.js
+- node --check src/monitor/__tests__/monitor-project-scope-and-control.test.js
+- node src/monitor/__tests__/monitor-project-scope-and-control.test.js (all PASS)
+
+---
+## 2026-02-23 22:56:46 | Task: 多项目运行时隔离落地方案 | Phase: Starting
+
+### Context
+用户要求在不做大规模内核改造前提下，梳理当前 project 作用域能力与运行时隔离缺口，并给出 Phase 1/2/3 的可落地方案、迁移回滚与验收清单。
+
+### Decision Point
+- Considering: 直接输出抽象方案，不核对代码现状
+- Considering: 先逐模块核对 queue/scheduler/sessionPool/store/monitor/control 的 projectId 行为
+- **Chosen:** 先核对代码与测试，再输出方案
+- **Reason:** 该任务强调“审核当前代码路径”，需要以真实实现为基线，避免偏差。
+
+### Current Progress
+- [x] 定位核心模块与相关测试
+- [x] 确认 projectId 已在 loader/store/scheduler/worker/worktree/monitor 传递与过滤
+- [ ] 形成隔离缺口矩阵
+- [ ] 输出分阶段实施方案文档
+
+---
+## 2026-02-23 23:02:10 | Task: 多项目运行时隔离落地方案 | Phase: Complete
+
+### Summary
+已完成代码路径审计并输出分阶段方案文档：`docs/multi-project-runtime-isolation-phased-plan.md`。
+
+### Key Decisions Made
+- 将“project 作用域”与“运行时隔离”明确拆分：前者已具备，后者仍缺队列/调度/sessionPool/状态的资源隔离。
+- 采用 Phase 1/2/3 递进路线：先软隔离（公平调度+项目配额+路由键），再分片隔离，最后 lane 级强隔离。
+- 每阶段都定义了迁移、回滚、可观测指标与可执行验收清单，避免只给方向不给落地标准。
+
+### Observations
+- 当前核心风险是共享资源导致的跨项目争抢和故障扩散，而非 projectId 字段缺失。
+- 项目控制 API 已有入口，但底层 runtime 控制对象仍是全局实例。
+
+### Next Action
+等待用户确认是否进入 Phase 1 的实现拆解（任务分解 + 代码改造顺序 + 测试清单）。
+
+---
+## 2026-02-23 22:57:32 | Task: 多-agent整改第二轮 | Phase: Complete
+
+### Summary
+并行完成三项：
+1) AC 硬门禁（session-pool）
+2) dryRun/planOnly 模式透明化（monitor + frontend）
+3) 多项目运行时隔离分阶段文档
+
+### Validation
+- 全量测试通过：node --test (24/24)
+
+### Key Decisions
+- AC 门禁以结构化回执为准，缺失或不完整直接阻断 phase_done。
+- /health 新增 mode/simulated 顶层字段，同时保留 executionMode 保持兼容。
+- 运行时隔离先按 Phase1 软隔离推进，避免一次性重构风险。
+
+---

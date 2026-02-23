@@ -727,7 +727,9 @@
   }
 
   function updateHeaderHealth(health) {
-    setText("chip-env", health?.service?.available ? "env: single-instance" : "env: degraded");
+    const envLabel = health?.service?.available ? "single-instance" : "degraded";
+    const modeLabel = health?.mode || health?.executionMode?.label || "live";
+    setText("chip-env", `env: ${envLabel} · mode: ${modeLabel}`);
     setText("chip-timezone", "timezone: UTC+8");
   }
 
@@ -2246,7 +2248,7 @@
         });
         updateHeaderHealth(health);
       } catch (err) {
-        setText("chip-env", "env: degraded");
+        setText("chip-env", "env: degraded · mode: unknown");
         setText("chip-timezone", "timezone: UTC+8");
         console.error(err);
       }
