@@ -715,3 +715,11 @@ Runtime-level multi-project isolation and stricter acceptance-criteria enforceme
 若继续推进，可把项目级运行指标写入 /health 并接入前端项目看板。
 
 ---
+## 2026-02-23 23:16:10 | Task: story限额解释 | Phase: Complete
+
+### Summary
+回答用户关于 story 限额是否 project 级或全局：
+- 并发限额同时支持全局和每项目（后者可选）
+- 重试次数限额是每 story（默认值来自全局配置）
+
+---
