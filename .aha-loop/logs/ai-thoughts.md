@@ -723,3 +723,9 @@ Runtime-level multi-project isolation and stricter acceptance-criteria enforceme
 - 重试次数限额是每 story（默认值来自全局配置）
 
 ---
+## 2026-02-23 23:20:38 | Task: 启动与前端项目控制说明 | Phase: Complete
+
+### Summary
+整理了当前可用启动方式、前端项目控制流程，以及 vision 输入能力边界（当前仅展示，不支持前端录入/触发 vision pipeline）。
+
+---
