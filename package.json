@@ -1,0 +1,21 @@
+{
+  "name": "aha-loop-mq",
+  "version": "0.1.0",
+  "description": "Aha-Loop MQ 执行引擎 — 状态机 + RabbitMQ + Worktree 并行调度框架",
+  "main": "src/index.js",
+  "bin": {
+    "aha-loop": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "ui": "node src/index.js --resume-from-state"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.9"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}

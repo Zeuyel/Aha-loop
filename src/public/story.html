@@ -1,0 +1,86 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aha Loop MQ · Story Detail</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body data-page="story">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>AHA LOOP MQ</h1>
+        <p>Control plane</p>
+      </div>
+      <nav class="nav">
+        <button class="nav-item" data-page="projects"><i data-lucide="folder-kanban"></i><span>Projects</span></button>
+        <button class="nav-item" data-page="overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></button>
+        <button class="nav-item active" data-page="stories"><i data-lucide="book-open"></i><span>Stories</span></button>
+        <button class="nav-item" data-page="incidents"><i data-lucide="alert-triangle"></i><span>Incidents</span></button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="header">
+        <div>
+          <h2 id="header-title">STORY DETAIL</h2>
+          <p id="header-subtitle">phase cards · readable stdout/stderr · execution timeline</p>
+        </div>
+        <div id="header-actions" class="header-actions">
+          <button class="btn btn-soft" data-page="stories">Back To Stories</button>
+          <div id="header-boot-cta" class="boot-cta hidden">
+            <span>GUIDE</span>
+            <small>FLOW</small>
+          </div>
+          <div id="header-chips" class="chips hidden">
+            <span id="chip-env" class="chip">env: single-instance</span>
+            <span id="chip-timezone" class="chip">timezone: UTC+8</span>
+            <span id="chip-refresh" class="chip chip-accent">refresh 5s</span>
+          </div>
+        </div>
+      </header>
+
+      <section id="page-story" class="page active">
+        <article class="panel">
+          <div class="panel-head">
+            <h3 id="story-page-title">loading...</h3>
+            <span id="story-page-subtitle" class="panel-meta">loading...</span>
+          </div>
+          <div id="story-summary" class="inline-metrics">loading...</div>
+        </article>
+
+        <article class="panel grow">
+          <div class="panel-head">
+            <h3>Phase Details</h3>
+            <span class="panel-meta">latest run of each phase · stdout/stderr readability view</span>
+          </div>
+          <div id="story-phase-grid" class="story-phase-grid">loading...</div>
+        </article>
+
+        <div class="grid two-col-main">
+          <article class="panel">
+            <div class="panel-head">
+              <h3>Recent Runs</h3>
+            </div>
+            <pre id="story-run-list" class="story-run-list mono">loading...</pre>
+          </article>
+          <article class="panel">
+            <div class="panel-head">
+              <h3>Raw Story Detail JSON</h3>
+            </div>
+            <div id="story-raw-detail" class="json-view">loading...</div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

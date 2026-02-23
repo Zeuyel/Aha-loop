@@ -1,0 +1,282 @@
+{
+  "version": 1,
+  "updatedAt": "2026-02-20T15:26:01.295+08:00",
+  "pipeline": {
+    "visionFile": null,
+    "status": "executing",
+    "resumedAt": "2026-02-20T15:22:00.521+08:00",
+    "createdAt": "2026-02-20T15:22:00.521+08:00",
+    "error": null,
+    "updatedAt": "2026-02-20T15:22:00.521+08:00"
+  },
+  "prds": [
+    {
+      "id": "PRD-MQ-UI",
+      "title": "MQ Observability Demo",
+      "status": "completed",
+      "stories": [
+        "US-001",
+        "US-002"
+      ],
+      "workspacePath": "C:\\Users\\epictus\\Documents\\work\\Aha-Loop-mq-framework",
+      "createdAt": "2026-02-18T03:02:03.410Z",
+      "updatedAt": "2026-02-18T03:02:59.016Z",
+      "_lastTransition": {
+        "from": "active",
+        "to": "completed",
+        "action": "all_stories_done",
+        "at": "2026-02-18T03:02:59.016Z"
+      }
+    }
+  ],
+  "stories": [
+    {
+      "id": "US-001",
+      "prdId": "PRD-MQ-UI",
+      "title": "Collect queue metrics",
+      "phase": "implement",
+      "phases": [
+        "research",
+        "plan",
+        "implement"
+      ],
+      "status": "completed",
+      "attempt": 1,
+      "maxAttempts": 2,
+      "dependencies": [],
+      "priority": 1,
+      "worktreeId": "wt-8ec2eba4",
+      "sessionId": "ses-a6b8da65",
+      "tool": "codex",
+      "timeoutMs": null,
+      "createdAt": "2026-02-18T03:02:03.411Z",
+      "startedAt": "2026-02-18T03:02:23.483Z",
+      "finishedAt": "2026-02-18T03:02:28.654Z",
+      "error": null,
+      "updatedAt": "2026-02-18T03:02:28.654Z",
+      "traceId": "trace-c71fe2a5-25b",
+      "dispatchAt": "2026-02-18T03:02:23.481Z",
+      "lastError": null,
+      "_lastTransition": {
+        "from": "merging",
+        "to": "completed",
+        "action": "merge_ok",
+        "at": "2026-02-18T03:02:28.654Z"
+      },
+      "startAt": "2026-02-18T03:02:23.483Z"
+    },
+    {
+      "id": "US-002",
+      "prdId": "PRD-MQ-UI",
+      "title": "Render observability dashboard",
+      "phase": "implement",
+      "phases": [
+        "explore",
+        "plan",
+        "implement"
+      ],
+      "status": "completed",
+      "attempt": 1,
+      "maxAttempts": 2,
+      "dependencies": [
+        "US-001"
+      ],
+      "priority": 2,
+      "worktreeId": "wt-1dcc1784",
+      "sessionId": "ses-7491912c",
+      "tool": "codex",
+      "timeoutMs": null,
+      "createdAt": "2026-02-18T03:02:03.411Z",
+      "startedAt": "2026-02-18T03:02:53.530Z",
+      "finishedAt": "2026-02-18T03:02:58.732Z",
+      "error": null,
+      "updatedAt": "2026-02-18T03:02:58.732Z",
+      "traceId": "trace-49eb8a8f-b45",
+      "dispatchAt": "2026-02-18T03:02:53.528Z",
+      "lastError": null,
+      "_lastTransition": {
+        "from": "merging",
+        "to": "completed",
+        "action": "merge_ok",
+        "at": "2026-02-18T03:02:58.732Z"
+      },
+      "startAt": "2026-02-18T03:02:53.530Z"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "ses-c34582a7",
+      "storyId": "US-001",
+      "prdId": "PRD-MQ-UI",
+      "phase": "research",
+      "status": "completed",
+      "traceId": "trace-c71fe2a5-25b",
+      "worktreePath": "C:\\Users\\epictus\\Documents\\work\\Aha-Loop-mq-framework\\.worktrees\\US-001",
+      "tool": "codex",
+      "attempt": 1,
+      "timeoutMs": 600000,
+      "dispatchAt": "2026-02-18T03:02:03.443Z",
+      "pid": null,
+      "exitCode": 0,
+      "error": null,
+      "createdAt": "2026-02-18T03:02:03.892Z",
+      "startedAt": "2026-02-18T03:02:03.892Z",
+      "finishedAt": "2026-02-18T03:02:03.893Z",
+      "updatedAt": "2026-02-18T03:02:03.893Z",
+      "finishAt": "2026-02-18T03:02:03.893Z"
+    },
+    {
+      "id": "ses-4fb61d6e",
+      "storyId": "US-001",
+      "prdId": "PRD-MQ-UI",
+      "phase": "plan",
+      "status": "completed",
+      "traceId": "trace-c71fe2a5-25b",
+      "worktreePath": "C:\\Users\\epictus\\Documents\\work\\Aha-Loop-mq-framework\\.worktrees\\US-001",
+      "tool": "codex",
+      "attempt": 1,
+      "timeoutMs": 600000,
+      "dispatchAt": "2026-02-18T03:02:13.468Z",
+      "pid": null,
+      "exitCode": 0,
+      "error": null,
+      "createdAt": "2026-02-18T03:02:13.470Z",
+      "startedAt": "2026-02-18T03:02:13.470Z",
+      "finishedAt": "2026-02-18T03:02:13.471Z",
+      "updatedAt": "2026-02-18T03:02:13.471Z",
+      "finishAt": "2026-02-18T03:02:13.471Z"
+    },
+    {
+      "id": "ses-a6b8da65",
+      "storyId": "US-001",
+      "prdId": "PRD-MQ-UI",
+      "phase": "implement",
+      "status": "completed",
+      "traceId": "trace-c71fe2a5-25b",
+      "worktreePath": "C:\\Users\\epictus\\Documents\\work\\Aha-Loop-mq-framework\\.worktrees\\US-001",
+      "tool": "codex",
+      "attempt": 1,
+      "timeoutMs": 600000,
+      "dispatchAt": "2026-02-18T03:02:23.481Z",
+      "pid": null,
+      "exitCode": 0,
+      "error": null,
+      "createdAt": "2026-02-18T03:02:23.483Z",
+      "startedAt": "2026-02-18T03:02:23.483Z",
+      "finishedAt": "2026-02-18T03:02:23.484Z",
+      "updatedAt": "2026-02-18T03:02:23.484Z",
+      "finishAt": "2026-02-18T03:02:23.484Z"
+    },
+    {
+      "id": "ses-4c72a3a1",
+      "storyId": "US-002",
+      "prdId": "PRD-MQ-UI",
+      "phase": "explore",
+      "status": "completed",
+      "traceId": "trace-49eb8a8f-b45",
+      "worktreePath": "C:\\Users\\epictus\\Documents\\work\\Aha-Loop-mq-framework\\.worktrees\\US-002",
+      "tool": "codex",
+      "attempt": 1,
+      "timeoutMs": 600000,
+      "dispatchAt": "2026-02-18T03:02:33.496Z",
+      "pid": null,
+      "exitCode": 0,
+      "error": null,
+      "createdAt": "2026-02-18T03:02:33.866Z",
+      "startedAt": "2026-02-18T03:02:33.866Z",
+      "finishedAt": "2026-02-18T03:02:33.866Z",
+      "updatedAt": "2026-02-18T03:02:33.866Z",
+      "finishAt": "2026-02-18T03:02:33.866Z"
+    },
+    {
+      "id": "ses-8d6f52d8",
+      "storyId": "US-002",
+      "prdId": "PRD-MQ-UI",
+      "phase": "plan",
+      "status": "completed",
+      "traceId": "trace-49eb8a8f-b45",
+      "worktreePath": "C:\\Users\\epictus\\Documents\\work\\Aha-Loop-mq-framework\\.worktrees\\US-002",
+      "tool": "codex",
+      "attempt": 1,
+      "timeoutMs": 600000,
+      "dispatchAt": "2026-02-18T03:02:43.512Z",
+      "pid": null,
+      "exitCode": 0,
+      "error": null,
+      "createdAt": "2026-02-18T03:02:43.515Z",
+      "startedAt": "2026-02-18T03:02:43.515Z",
+      "finishedAt": "2026-02-18T03:02:43.515Z",
+      "updatedAt": "2026-02-18T03:02:43.515Z",
+      "finishAt": "2026-02-18T03:02:43.515Z"
+    },
+    {
+      "id": "ses-7491912c",
+      "storyId": "US-002",
+      "prdId": "PRD-MQ-UI",
+      "phase": "implement",
+      "status": "completed",
+      "traceId": "trace-49eb8a8f-b45",
+      "worktreePath": "C:\\Users\\epictus\\Documents\\work\\Aha-Loop-mq-framework\\.worktrees\\US-002",
+      "tool": "codex",
+      "attempt": 1,
+      "timeoutMs": 600000,
+      "dispatchAt": "2026-02-18T03:02:53.528Z",
+      "pid": null,
+      "exitCode": 0,
+      "error": null,
+      "createdAt": "2026-02-18T03:02:53.530Z",
+      "startedAt": "2026-02-18T03:02:53.530Z",
+      "finishedAt": "2026-02-18T03:02:53.530Z",
+      "updatedAt": "2026-02-18T03:02:53.530Z",
+      "finishAt": "2026-02-18T03:02:53.530Z"
+    }
+  ],
+  "runs": [],
+  "worktrees": [
+    {
+      "id": "wt-8ec2eba4",
+      "storyId": "US-001",
+      "branch": "story/US-001",
+      "path": "C:\\Users\\epictus\\Documents\\work\\Aha-Loop-mq-framework\\.worktrees\\US-001",
+      "status": "cleaned",
+      "createdAt": "2026-02-18T03:02:03.874Z",
+      "mergedAt": "2026-02-18T03:02:28.653Z",
+      "cleanedAt": "2026-02-18T03:02:28.925Z",
+      "updatedAt": "2026-02-18T03:02:28.925Z"
+    },
+    {
+      "id": "wt-1dcc1784",
+      "storyId": "US-002",
+      "branch": "story/US-002",
+      "path": "C:\\Users\\epictus\\Documents\\work\\Aha-Loop-mq-framework\\.worktrees\\US-002",
+      "status": "cleaned",
+      "createdAt": "2026-02-18T03:02:33.863Z",
+      "mergedAt": "2026-02-18T03:02:58.732Z",
+      "cleanedAt": "2026-02-18T03:02:59.015Z",
+      "updatedAt": "2026-02-18T03:02:59.015Z"
+    }
+  ],
+  "projects": [
+    {
+      "id": "proj-aha-loop-mq-framework",
+      "name": "Aha-Loop-mq-framework",
+      "description": "workspace project (C:\\Users\\epictus\\Documents\\work\\Aha-Loop-mq-framework)",
+      "stage": "in_progress",
+      "tags": [
+        "workspace"
+      ],
+      "storyCount": 2,
+      "progressPct": 0,
+      "targetDate": null,
+      "bootMode": "resume_existing",
+      "workspacePath": "C:\\Users\\epictus\\Documents\\work\\Aha-Loop-mq-framework",
+      "prdFile": "C:\\Users\\epictus\\Documents\\work\\Aha-Loop-mq-framework\\.aha-loop\\prd.json",
+      "roadmapFile": "C:\\Users\\epictus\\Documents\\work\\Aha-Loop-mq-framework\\.aha-loop\\project.roadmap.json",
+      "createdAt": "2026-02-20T15:25:34.550+08:00",
+      "updatedAt": "2026-02-20T15:26:01.240+08:00",
+      "source": "store",
+      "lastControlAction": "start",
+      "lastControlAt": "2026-02-20T15:26:01.239+08:00"
+    }
+  ]
+}
