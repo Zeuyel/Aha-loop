@@ -207,6 +207,7 @@ class Worker {
       });
       return;
     }
+    const effectiveProjectId = story.projectId || task.projectId || run.projectId || null;
 
     const preflight = this._preflightStoryContext(task, story);
     if (!preflight.ok) {
@@ -214,6 +215,7 @@ class Worker {
       const message = preflight.message;
       this.store.setRun({
         ...run,
+        projectId: run.projectId || effectiveProjectId,
         status: "fail",
         finishAt: failedAt,
         exitCode: null,
@@ -267,6 +269,7 @@ class Worker {
       runId,
       storyId: task.storyId,
       prdId: task.prdId,
+      projectId: effectiveProjectId,
       phase: task.phase,
       status: "running",
       traceId: task.traceId || runningStory.traceId || null,
@@ -287,6 +290,7 @@ class Worker {
     this.store.setSession(session);
     this.store.setRun({
       ...run,
+      projectId: run.projectId || effectiveProjectId,
       status: "running",
       startAt: startedAt,
       sessionId: session.id,
@@ -295,6 +299,7 @@ class Worker {
     this.store.setStory({
       ...runningStory,
       status: "running",
+      projectId: runningStory.projectId || effectiveProjectId,
       sessionId: session.id,
       traceId: session.traceId,
       startAt: startedAt,
@@ -355,6 +360,7 @@ class Worker {
     }
 
     const expectedPrdId = story.prdId || task.prdId || null;
+    const expectedProjectId = story.projectId || task.projectId || null;
     if (expectedPrdId && data?.prdId && data.prdId !== expectedPrdId) {
       return {
         ok: false,
@@ -364,6 +370,20 @@ class Worker {
           storyId: story.id,
           expectedPrdId,
           actualPrdId: data.prdId,
+          prdFile,
+        },
+      };
+    }
+
+    if (expectedProjectId && data?.projectId && data.projectId !== expectedProjectId) {
+      return {
+        ok: false,
+        code: "STORY_CONTEXT_PROJECT_MISMATCH",
+        message: `story context project mismatch: expected ${expectedProjectId}, got ${data.projectId}`,
+        detail: {
+          storyId: story.id,
+          expectedProjectId,
+          actualProjectId: data.projectId,
           prdFile,
         },
       };
@@ -407,6 +427,7 @@ class Worker {
     this._writeRuntimeStoryContextSnapshot({
       worktreePath,
       sourcePrdId: data?.prdId || null,
+      sourceProjectId: data?.projectId || null,
       story,
       task,
     });
@@ -414,12 +435,13 @@ class Worker {
     return { ok: true };
   }
 
-  _writeRuntimeStoryContextSnapshot({ worktreePath, sourcePrdId, story, task }) {
+  _writeRuntimeStoryContextSnapshot({ worktreePath, sourcePrdId, sourceProjectId, story, task }) {
     const desiredAttempt = this._normalizePositiveInt(task.attempt ?? story.attempt);
     const desiredMaxAttempts = this._normalizePositiveInt(task.maxAttempts ?? story.maxAttempts);
     const snapshot = {
       storyId: story.id,
       prdId: story.prdId || task.prdId || sourcePrdId || null,
+      projectId: story.projectId || task.projectId || sourceProjectId || null,
       status: story.status || null,
       phase: story.phase || task.phase || null,
       attempt: desiredAttempt,
@@ -434,6 +456,7 @@ class Worker {
       version: 1,
       updatedAt: nowEast8Iso(),
       prdId: snapshot.prdId,
+      projectId: snapshot.projectId,
       stories: {},
     };
 
@@ -445,6 +468,7 @@ class Worker {
             version: loaded.version || 1,
             updatedAt: loaded.updatedAt || nowEast8Iso(),
             prdId: loaded.prdId || snapshot.prdId,
+            projectId: loaded.projectId || snapshot.projectId,
             stories: loaded.stories && typeof loaded.stories === "object" ? loaded.stories : {},
           };
         }
@@ -464,6 +488,7 @@ class Worker {
         version: 1,
         updatedAt: nowEast8Iso(),
         prdId: snapshot.prdId,
+        projectId: snapshot.projectId,
         stories: {},
       };
     }
@@ -472,6 +497,7 @@ class Worker {
       fs.mkdirSync(runtimeDir, { recursive: true });
       runtimeData.updatedAt = nowEast8Iso();
       runtimeData.prdId = runtimeData.prdId || snapshot.prdId;
+      runtimeData.projectId = runtimeData.projectId || snapshot.projectId;
       runtimeData.stories[story.id] = {
         ...(runtimeData.stories[story.id] || {}),
         ...snapshot,

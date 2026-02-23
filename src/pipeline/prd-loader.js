@@ -17,27 +17,48 @@ async function loadPrds(roadmapFile, store, logger = console, options = {}) {
   const raw = await fsp.readFile(roadmapFile, "utf8");
   const roadmap = JSON.parse(raw);
   const resetBeforeLoad = options.resetBeforeLoad !== false;
+  const defaultProjectId = _resolveProjectId(options.projectId, roadmap?.projectId, roadmap?.project?.id);
 
   if (resetBeforeLoad && typeof store.resetExecutionState === "function") {
     store.resetExecutionState({ keepPipeline: true });
     logger.info("[prd-loader] cleared previous execution state before loading roadmap");
   }
 
-  const prds = _collectRoadmapPrds(roadmap);
+  const prds = _collectRoadmapPrds(roadmap, defaultProjectId, roadmapFile);
   if (prds.length === 0) {
     logger.warn("[prd-loader] no PRDs found in roadmap");
     return;
   }
 
   let storyCount = 0;
+  const batchPrdProjects = new Map();
+  const batchStoryProjects = new Map();
   for (let i = 0; i < prds.length; i++) {
     const prdData = prds[i];
     const prdId = prdData.id || `PRD-${String(i + 1).padStart(3, "0")}`;
+    const requestedPrdProjectId = _resolveProjectId(prdData.projectId, defaultProjectId);
+    const prdProjectId = _resolveProjectId(
+      requestedPrdProjectId,
+      _assertStoreProjectIdCompatibility({
+        store,
+        entityType: "PRD",
+        entityId: prdId,
+        incomingProjectId: requestedPrdProjectId,
+        sourceLabel: roadmapFile,
+      }),
+    );
+    _assertBatchProjectIdConsistency(batchPrdProjects, {
+      entityType: "PRD",
+      entityId: prdId,
+      projectId: prdProjectId,
+      sourceLabel: roadmapFile,
+    });
     const prdDependencies = _normalizeDependencyRefs(prdData.dependsOn || prdData.dependencies)
       .filter((ref) => _isPrdRef(ref));
 
     const prd = {
       id: prdId,
+      projectId: prdProjectId,
       title: prdData.title || prdData.name || prdId,
       status: _normalizePrdStatus(prdData.status),
       stories: [],
@@ -52,6 +73,23 @@ async function loadPrds(roadmapFile, store, logger = console, options = {}) {
     for (let j = 0; j < stories.length; j++) {
       const storyData = stories[j];
       const storyId = storyData.id || `${prdId}-US-${String(j + 1).padStart(3, "0")}`;
+      const requestedStoryProjectId = _resolveProjectId(storyData.projectId, prdProjectId, defaultProjectId);
+      const storyProjectId = _resolveProjectId(
+        requestedStoryProjectId,
+        _assertStoreProjectIdCompatibility({
+          store,
+          entityType: "Story",
+          entityId: storyId,
+          incomingProjectId: requestedStoryProjectId,
+          sourceLabel: roadmapFile,
+        }),
+      );
+      _assertBatchProjectIdConsistency(batchStoryProjects, {
+        entityType: "Story",
+        entityId: storyId,
+        projectId: storyProjectId,
+        sourceLabel: roadmapFile,
+      });
 
       const phases = _normalizePhases(storyData.phases || _inferPhases(storyData));
       const { storyDependencies, prdDependencies: storyPrdDependencies } = _splitStoryDependencies(
@@ -63,7 +101,14 @@ async function loadPrds(roadmapFile, store, logger = console, options = {}) {
       const story = {
         id: storyId,
         prdId,
+        projectId: storyProjectId,
         title: storyData.title || storyData.name || storyId,
+        acceptanceCriteria: _normalizeAcceptanceCriteria(
+          storyData.acceptanceCriteria
+          || storyData.criteria
+          || storyData.acceptance
+          || [],
+        ),
         phase: passed ? phases[phases.length - 1] : phases[0],
         phases,
         status: passed ? "completed" : "pending",
@@ -118,6 +163,7 @@ async function loadActivePrd(prdFile, store, logger = console, options = {}) {
   const raw = await fsp.readFile(prdFile, "utf8");
   const prdData = JSON.parse(raw);
   const resetBeforeLoad = options.resetBeforeLoad !== false;
+  const defaultProjectId = _resolveProjectId(options.projectId, prdData?.projectId, prdData?.project?.id);
 
   if (resetBeforeLoad && typeof store.resetExecutionState === "function") {
     store.resetExecutionState({ keepPipeline: true });
@@ -126,6 +172,17 @@ async function loadActivePrd(prdFile, store, logger = console, options = {}) {
 
   const prdId = prdData.prdId || prdData.id || "PRD-UNKNOWN";
   const stories = prdData.userStories || [];
+  const requestedPrdProjectId = _resolveProjectId(prdData.projectId, defaultProjectId);
+  const prdProjectId = _resolveProjectId(
+    requestedPrdProjectId,
+    _assertStoreProjectIdCompatibility({
+      store,
+      entityType: "PRD",
+      entityId: prdId,
+      incomingProjectId: requestedPrdProjectId,
+      sourceLabel: prdFile,
+    }),
+  );
 
   if (stories.length === 0) {
     logger.warn(`[prd-loader] prd ${prdId}: no userStories found`);
@@ -134,6 +191,7 @@ async function loadActivePrd(prdFile, store, logger = console, options = {}) {
 
   const prd = {
     id: prdId,
+    projectId: prdProjectId,
     title: prdData.project || prdData.title || prdId,
     status: "queued",
     stories: [],
@@ -143,8 +201,26 @@ async function loadActivePrd(prdFile, store, logger = console, options = {}) {
   };
 
   let pendingCount = 0;
+  const batchStoryProjects = new Map();
   for (const us of stories) {
     const storyId = us.id || `US-${String(stories.indexOf(us) + 1).padStart(3, "0")}`;
+    const requestedStoryProjectId = _resolveProjectId(us.projectId, prdProjectId, defaultProjectId);
+    const storyProjectId = _resolveProjectId(
+      requestedStoryProjectId,
+      _assertStoreProjectIdCompatibility({
+        store,
+        entityType: "Story",
+        entityId: storyId,
+        incomingProjectId: requestedStoryProjectId,
+        sourceLabel: prdFile,
+      }),
+    );
+    _assertBatchProjectIdConsistency(batchStoryProjects, {
+      entityType: "Story",
+      entityId: storyId,
+      projectId: storyProjectId,
+      sourceLabel: prdFile,
+    });
     const phases = _normalizePhases(_inferPhasesFromPrd(us));
     const { storyDependencies, prdDependencies } = _splitStoryDependencies(us, prd.dependencies);
     const passed = us.passes === true || _isCompletedStatus(us.status);
@@ -152,7 +228,14 @@ async function loadActivePrd(prdFile, store, logger = console, options = {}) {
     const story = {
       id: storyId,
       prdId,
+      projectId: storyProjectId,
       title: us.title || storyId,
+      acceptanceCriteria: _normalizeAcceptanceCriteria(
+        us.acceptanceCriteria
+        || us.criteria
+        || us.acceptance
+        || [],
+      ),
       phase: passed ? phases[phases.length - 1] : phases[0],
       phases,
       status: passed ? "completed" : "pending",
@@ -246,7 +329,7 @@ function _normalizePhases(phases) {
   return normalized.length > 0 ? [...new Set(normalized)] : [...STORY_PHASES];
 }
 
-function _collectRoadmapPrds(roadmap) {
+function _collectRoadmapPrds(roadmap, defaultProjectId = null, sourceLabel = "roadmap") {
   const collected = [];
 
   if (Array.isArray(roadmap?.prds)) {
@@ -276,7 +359,23 @@ function _collectRoadmapPrds(roadmap) {
       withoutId.push(prd);
       continue;
     }
-    if (!byId.has(prd.id)) byId.set(prd.id, prd);
+    if (!byId.has(prd.id)) {
+      byId.set(prd.id, prd);
+      continue;
+    }
+
+    const existing = byId.get(prd.id);
+    const existingProjectId = _resolveProjectId(existing?.projectId, defaultProjectId);
+    const incomingProjectId = _resolveProjectId(prd?.projectId, defaultProjectId);
+    if (existingProjectId && incomingProjectId && existingProjectId !== incomingProjectId) {
+      throw _projectIdConflictError({
+        entityType: "PRD",
+        entityId: prd.id,
+        existingProjectId,
+        incomingProjectId,
+        sourceLabel,
+      });
+    }
   }
 
   const deduped = Array.from(byId.values());
@@ -374,6 +473,96 @@ function _normalizePrdStatus(status) {
 function _removePhase(phases, phase) {
   const idx = phases.indexOf(phase);
   if (idx >= 0) phases.splice(idx, 1);
+}
+
+function _assertStoreProjectIdCompatibility({
+  store,
+  entityType,
+  entityId,
+  incomingProjectId,
+  sourceLabel,
+}) {
+  const normalizedIncoming = _normalizeProjectId(incomingProjectId);
+  const existing = entityType === "PRD" ? store.getPrd(entityId) : store.getStory(entityId);
+  const existingProjectId = _normalizeProjectId(existing?.projectId);
+
+  if (existingProjectId && normalizedIncoming && existingProjectId !== normalizedIncoming) {
+    throw _projectIdConflictError({
+      entityType,
+      entityId,
+      existingProjectId,
+      incomingProjectId: normalizedIncoming,
+      sourceLabel,
+    });
+  }
+
+  return existingProjectId;
+}
+
+function _assertBatchProjectIdConsistency(projectMap, { entityType, entityId, projectId, sourceLabel }) {
+  const normalized = _normalizeProjectId(projectId);
+  const seen = projectMap.get(entityId) || null;
+  if (seen && normalized && seen !== normalized) {
+    throw _projectIdConflictError({
+      entityType,
+      entityId,
+      existingProjectId: seen,
+      incomingProjectId: normalized,
+      sourceLabel,
+    });
+  }
+  projectMap.set(entityId, seen || normalized);
+}
+
+function _projectIdConflictError({ entityType, entityId, existingProjectId, incomingProjectId, sourceLabel }) {
+  const err = new Error(
+    `[prd-loader] projectId conflict for ${entityType} ${entityId} while loading ${sourceLabel}: `
+    + `existing projectId=${JSON.stringify(existingProjectId)}, `
+    + `incoming projectId=${JSON.stringify(incomingProjectId)}. `
+    + "Refusing to overwrite cross-project entity.",
+  );
+  err.code = "PRD_LOADER_PROJECT_ID_CONFLICT";
+  err.entityType = entityType;
+  err.entityId = entityId;
+  err.existingProjectId = existingProjectId;
+  err.incomingProjectId = incomingProjectId;
+  err.source = sourceLabel;
+  return err;
+}
+
+function _resolveProjectId(...candidates) {
+  for (const candidate of candidates) {
+    const normalized = _normalizeProjectId(candidate);
+    if (normalized) return normalized;
+  }
+  return null;
+}
+
+function _normalizeProjectId(value) {
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text ? text : null;
+}
+
+function _normalizeAcceptanceCriteria(input) {
+  const rawList = Array.isArray(input)
+    ? input
+    : input == null
+      ? []
+      : [input];
+
+  return rawList
+    .map((item) => {
+      if (item == null) return null;
+      if (typeof item === "string") return item.trim();
+      if (typeof item === "object") {
+        const candidate = item.text || item.title || item.name || null;
+        return candidate ? String(candidate).trim() : null;
+      }
+      return String(item).trim();
+    })
+    .filter(Boolean)
+    .slice(0, 50);
 }
 
 module.exports = { loadPrds, loadActivePrd };

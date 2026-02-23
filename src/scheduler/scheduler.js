@@ -449,6 +449,7 @@ class Scheduler {
     const runId = `run-${crypto.randomUUID().slice(0, 12)}`;
     const traceId = story.traceId || `trace-${crypto.randomUUID().slice(0, 12)}`;
     const dispatchAt = nowEast8Iso();
+    const projectId = story.projectId || null;
 
     try {
       const wt = await this.worktreeManager.ensure(story);
@@ -460,6 +461,7 @@ class Scheduler {
         id: runId,
         storyId: story.id,
         prdId: story.prdId || null,
+        projectId,
         phase: story.phase || null,
         status: "fail",
         attempt: story.attempt || 1,
@@ -496,6 +498,7 @@ class Scheduler {
       id: runId,
       storyId: story.id,
       prdId: story.prdId || null,
+      projectId,
       phase: story.phase || null,
       status: "queued",
       attempt: story.attempt || 1,
@@ -515,8 +518,11 @@ class Scheduler {
       await this.queue.publishTask({
         runId,
         storyId: story.id,
+        storyTitle: story.title || story.id,
         prdId: story.prdId,
+        projectId,
         phase: story.phase,
+        acceptanceCriteria: Array.isArray(story.acceptanceCriteria) ? story.acceptanceCriteria : [],
         worktreeId: wtId,
         worktreePath,
         workspacePath: this.config.workspace,
@@ -535,6 +541,7 @@ class Scheduler {
         id: runId,
         storyId: story.id,
         prdId: story.prdId || null,
+        projectId,
         phase: story.phase || null,
         attempt: story.attempt || 1,
         traceId,

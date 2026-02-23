@@ -5,6 +5,7 @@
   const EAST8_TIMEZONE = "Asia/Shanghai";
   const HISTORY_POINTS = 48;
   const NOTIFY_PREF_KEY = "aha_loop_notify_v1";
+  const SELECTED_PROJECT_PREF_KEY = "aha_loop_selected_project_v1";
   const PROJECT_STAGE_ORDER = ["backlog", "in_progress", "review", "done"];
   const PROJECT_STAGE_LABELS = {
     backlog: "Backlog",
@@ -48,6 +49,7 @@
     story: "/story.html",
     incidents: "/incidents.html",
   };
+  const PROJECT_SCOPED_PAGES = new Set(["overview", "stories", "story", "incidents"]);
 
   const initialPage = (() => {
     const raw = document.body?.dataset?.page || "boot";
@@ -109,6 +111,71 @@
     const el = typeof target === "string" ? $(target) : target;
     if (!el) return;
     if (el.innerHTML !== html) el.innerHTML = html;
+  }
+
+  function normalizeProjectId(projectId) {
+    if (projectId == null) return null;
+    const normalized = String(projectId).trim();
+    return normalized || null;
+  }
+
+  function saveSelectedProjectId(projectId) {
+    const normalized = normalizeProjectId(projectId);
+    try {
+      if (!normalized) {
+        localStorage.removeItem(SELECTED_PROJECT_PREF_KEY);
+      } else {
+        localStorage.setItem(SELECTED_PROJECT_PREF_KEY, normalized);
+      }
+    } catch {
+      // ignore local storage errors
+    }
+  }
+
+  function setSelectedProjectId(projectId, { persist = true } = {}) {
+    const normalized = normalizeProjectId(projectId);
+    state.selectedProjectId = normalized;
+    if (persist) saveSelectedProjectId(normalized);
+    return normalized;
+  }
+
+  function loadSelectedProjectId() {
+    try {
+      return normalizeProjectId(localStorage.getItem(SELECTED_PROJECT_PREF_KEY));
+    } catch {
+      return null;
+    }
+  }
+
+  function getActiveProjectId(projectId) {
+    return normalizeProjectId(projectId) || normalizeProjectId(state.selectedProjectId);
+  }
+
+  function withProjectId(url, projectId = state.selectedProjectId) {
+    const activeProjectId = getActiveProjectId(projectId);
+    if (!activeProjectId) return url;
+
+    const [base, hash = ""] = String(url).split("#");
+    const [path, rawQuery = ""] = base.split("?");
+    const params = new URLSearchParams(rawQuery);
+    params.set("projectId", activeProjectId);
+    const query = params.toString();
+    return `${path}${query ? `?${query}` : ""}${hash ? `#${hash}` : ""}`;
+  }
+
+  function buildStoryDetailHref(storyId, projectId = state.selectedProjectId) {
+    if (!storyId) return "/story.html";
+    const params = new URLSearchParams();
+    params.set("storyId", storyId);
+    const activeProjectId = getActiveProjectId(projectId);
+    if (activeProjectId) params.set("projectId", activeProjectId);
+    return `/story.html?${params.toString()}`;
+  }
+
+  function makeCacheKey(key, { projectScoped = false, projectId } = {}) {
+    if (!projectScoped) return key;
+    const suffix = getActiveProjectId(projectId) || "__all__";
+    return `${key}::project:${suffix}`;
   }
 
   function formatEast8(value, includeDate = true) {
@@ -552,13 +619,15 @@
     return sendJson(url, "DELETE", null, options);
   }
 
-  async function fetchWithCache(key, url) {
+  async function fetchWithCache(key, url, options = {}) {
+    const cacheKey = makeCacheKey(key, options);
+    const requestUrl = options.projectScoped ? withProjectId(url, options.projectId) : url;
     try {
-      const payload = await fetchJson(url);
-      state.cache[key] = payload;
+      const payload = await fetchJson(requestUrl);
+      state.cache[cacheKey] = payload;
       return payload;
     } catch (err) {
-      if (state.cache[key]) return state.cache[key];
+      if (state.cache[cacheKey]) return state.cache[cacheKey];
       throw err;
     }
   }
@@ -566,7 +635,7 @@
   async function fetchOverviewMetrics(range) {
     if (state.overviewMetricsUnsupported) return null;
     try {
-      return await fetchWithCache("overviewMetrics", `/metrics/overview?window=${range}`);
+      return await fetchWithCache("overviewMetrics", `/metrics/overview?window=${range}`, { projectScoped: true });
     } catch {
       state.overviewMetricsUnsupported = true;
       return null;
@@ -574,7 +643,15 @@
   }
 
   function clearCache(keys) {
-    for (const key of keys) delete state.cache[key];
+    const cacheKeys = Object.keys(state.cache);
+    for (const key of keys) {
+      const scopePrefix = `${key}::project:`;
+      for (const cacheKey of cacheKeys) {
+        if (cacheKey === key || cacheKey.startsWith(scopePrefix)) {
+          delete state.cache[cacheKey];
+        }
+      }
+    }
   }
 
   function refreshIcons() {
@@ -638,9 +715,15 @@
     return raw ? raw.trim() : "";
   }
 
+  function getProjectIdFromQuery() {
+    const params = new URLSearchParams(window.location.search || "");
+    const raw = params.get("projectId");
+    return raw ? raw.trim() : "";
+  }
+
   function openStoryDetailPage(storyId) {
     if (!storyId) return;
-    window.location.href = `/story.html?storyId=${encodeURIComponent(storyId)}`;
+    window.location.href = buildStoryDetailHref(storyId);
   }
 
   function updateHeaderHealth(health) {
@@ -742,7 +825,7 @@
     if (!select) return;
     const items = snapshot?.items || [];
     if (!state.selectedProjectId || !items.some((item) => item.id === state.selectedProjectId)) {
-      state.selectedProjectId = items[0]?.id || null;
+      setSelectedProjectId(items[0]?.id || null);
     }
     const options = items.length
       ? items
@@ -1246,7 +1329,7 @@
   }
 
   async function renderOverview() {
-    const health = await fetchWithCache("health", "/health").catch(() => ({
+    const health = await fetchWithCache("health", "/health", { projectScoped: true }).catch(() => ({
       timestamp: new Date().toISOString(),
       queue: {
         ok: false,
@@ -1270,15 +1353,15 @@
     const range = state.overviewRange === "15m" ? "15m" : "5m";
     const [overviewMetrics, queues, stories, runs, alerts, latency, vision] = await Promise.all([
       fetchOverviewMetrics(range),
-      fetchWithCache("queuesMetrics", "/metrics/queues").catch(() => ({
+      fetchWithCache("queuesMetrics", "/metrics/queues", { projectScoped: true }).catch(() => ({
         timestamp: health.timestamp || new Date().toISOString(),
         queue: health.queue || { queues: { work: {}, retry: {}, dead: {} } },
         source: "health_fallback",
       })),
-      fetchWithCache("stories100", "/stories?limit=100").catch(() => ({ totals: {}, items: [] })),
-      fetchWithCache("runs120", "/runs?limit=300").catch(() => ({ totals: {}, items: [] })),
-      fetchWithCache("alerts8", "/alerts?limit=8").catch(() => ({ recent: [] })),
-      fetchWithCache("latency", "/metrics/latency").catch(() => ({
+      fetchWithCache("stories100", "/stories?limit=100", { projectScoped: true }).catch(() => ({ totals: {}, items: [] })),
+      fetchWithCache("runs120", "/runs?limit=300", { projectScoped: true }).catch(() => ({ totals: {}, items: [] })),
+      fetchWithCache("alerts8", "/alerts?limit=8", { projectScoped: true }).catch(() => ({ recent: [] })),
+      fetchWithCache("latency", "/metrics/latency", { projectScoped: true }).catch(() => ({
         latest: {
           last5m: health?.latency?.last5m || { avgMs: 0, p95Ms: 0 },
           last15m: health?.latency?.last15m || { avgMs: 0, p95Ms: 0 },
@@ -1468,13 +1551,13 @@
     }
 
     try {
-      const detail = await fetchWithCache(`story-detail:${storyId}`, `/stories/${encodeURIComponent(storyId)}?limit=20`);
+      const detail = await fetchWithCache(`story-detail:${storyId}`, `/stories/${encodeURIComponent(storyId)}?limit=20`, { projectScoped: true });
       setJsonView("stories-detail", detail);
     } catch (err) {
       try {
         const [stories, runs] = await Promise.all([
-          fetchWithCache("stories100", "/stories?limit=200"),
-          fetchWithCache("runs120", "/runs?limit=300"),
+          fetchWithCache("stories100", "/stories?limit=200", { projectScoped: true }),
+          fetchWithCache("runs120", "/runs?limit=300", { projectScoped: true }),
         ]);
         const story = (stories?.items || []).find((s) => s.storyId === storyId) || null;
         const allRuns = (runs?.items || []).filter((r) => r.storyId === storyId);
@@ -1713,11 +1796,11 @@
     }
 
     try {
-      const detail = await fetchWithCache(`run-detail:${runId}`, `/runs/${encodeURIComponent(runId)}?tail=16000`);
+      const detail = await fetchWithCache(`run-detail:${runId}`, `/runs/${encodeURIComponent(runId)}?tail=16000`, { projectScoped: true });
       setHtml("stories-run-detail", renderRunDetailContent(detail));
     } catch (err) {
       try {
-        const runs = await fetchWithCache("runs120", "/runs?limit=300");
+        const runs = await fetchWithCache("runs120", "/runs?limit=300", { projectScoped: true });
         const run = (runs?.items || []).find((item) => item.runId === runId) || null;
         setJsonView("stories-run-detail", {
           timestamp: new Date().toISOString(),
@@ -1733,8 +1816,8 @@
 
   async function renderStories() {
     const [stories, runs] = await Promise.all([
-      fetchWithCache("stories100", "/stories?limit=100"),
-      fetchWithCache("runs120", "/runs?limit=120"),
+      fetchWithCache("stories100", "/stories?limit=100", { projectScoped: true }),
+      fetchWithCache("runs120", "/runs?limit=120", { projectScoped: true }),
     ]);
 
     const totals = stories?.totals || {};
@@ -1762,7 +1845,7 @@
     const rows = sortedItems
       .map((s) => {
         const selectedClass = s.storyId === state.selectedStoryId ? "selected" : "";
-        const storyHref = `/story.html?storyId=${encodeURIComponent(s.storyId || "")}`;
+        const storyHref = buildStoryDetailHref(s.storyId || "");
         return `
           <tr class="${selectedClass}" data-story-id="${esc(s.storyId)}">
             <td><a class="story-link" data-open-story="true" data-story-id="${esc(s.storyId)}" href="${storyHref}">${esc(s.storyId)}</a></td>
@@ -1880,7 +1963,7 @@
       return;
     }
 
-    const detail = await fetchWithCache(`story-detail:${storyId}`, `/stories/${encodeURIComponent(storyId)}?limit=80`);
+    const detail = await fetchWithCache(`story-detail:${storyId}`, `/stories/${encodeURIComponent(storyId)}?limit=80`, { projectScoped: true });
     const story = detail?.story || {};
     const recentRuns = Array.isArray(detail?.recentRuns) ? detail.recentRuns : [];
 
@@ -1914,7 +1997,7 @@
     const runDetailPairs = await Promise.all(
       phaseRunIds.map(async (runId) => {
         try {
-          const runDetail = await fetchWithCache(`run-detail-full:${runId}`, `/runs/${encodeURIComponent(runId)}?tail=20000`);
+          const runDetail = await fetchWithCache(`run-detail-full:${runId}`, `/runs/${encodeURIComponent(runId)}?tail=20000`, { projectScoped: true });
           return [runId, runDetail];
         } catch {
           return [runId, null];
@@ -2000,9 +2083,9 @@
 
   async function renderIncidents() {
     const [alerts, dead, health] = await Promise.all([
-      fetchWithCache("alerts200", "/alerts?limit=200"),
-      fetchWithCache("dead200", "/dead-letters?limit=200"),
-      fetchWithCache("health", "/health"),
+      fetchWithCache("alerts200", "/alerts?limit=200", { projectScoped: true }),
+      fetchWithCache("dead200", "/dead-letters?limit=200", { projectScoped: true }),
+      fetchWithCache("health", "/health", { projectScoped: true }),
     ]);
 
     const live = (alerts?.recent || []).slice(0, 12).map((a) => ({
@@ -2093,6 +2176,7 @@
   async function sendProjectControl(action, extra = {}) {
     const projectId = extra.projectId || $("project-control-id")?.value?.trim() || state.selectedProjectId || "";
     if (!projectId) throw new Error("projectId is required");
+    setSelectedProjectId(projectId);
     const mode = extra.mode || $("project-control-mode")?.value?.trim() || "resume_existing";
     const prdFileInput = $("project-control-prd-file")?.value?.trim() || "";
     const roadmapFileInput = $("project-control-roadmap-file")?.value?.trim() || "";
@@ -2157,7 +2241,9 @@
     state.refreshInFlight = true;
     try {
       try {
-        const health = await fetchWithCache("health", "/health");
+        const health = await fetchWithCache("health", "/health", {
+          projectScoped: PROJECT_SCOPED_PAGES.has(state.page),
+        });
         updateHeaderHealth(health);
       } catch (err) {
         setText("chip-env", "env: degraded");
@@ -2178,6 +2264,9 @@
     }
   }
 
+  setSelectedProjectId(loadSelectedProjectId(), { persist: false });
+  const queryProjectId = getProjectIdFromQuery();
+  if (queryProjectId) setSelectedProjectId(queryProjectId);
   loadNotificationPrefs();
   updateNotificationUi();
 
@@ -2450,7 +2539,7 @@
   document.addEventListener("change", async (event) => {
     const projectSelect = event.target.closest("#project-control-id");
     if (projectSelect) {
-      state.selectedProjectId = projectSelect.value || null;
+      setSelectedProjectId(projectSelect.value || null);
       const projects = state.cache.projects;
       const current = (projects?.items || []).find((item) => item.id === state.selectedProjectId);
       const modeSelect = $("project-control-mode");

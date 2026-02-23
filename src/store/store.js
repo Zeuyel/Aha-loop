@@ -86,6 +86,9 @@ class Store {
   listPrds(filter) {
     let result = Array.from(this._prds.values());
     if (filter?.status) result = result.filter((p) => p.status === filter.status);
+    if (filter && Object.prototype.hasOwnProperty.call(filter, "projectId")) {
+      result = result.filter((p) => (p.projectId || null) === (filter.projectId || null));
+    }
     return result;
   }
   getPrd(id) { return this._prds.get(id) || null; }
@@ -114,6 +117,9 @@ class Store {
     let result = Array.from(this._stories.values());
     if (filter?.status) result = result.filter((s) => s.status === filter.status);
     if (filter?.prdId) result = result.filter((s) => s.prdId === filter.prdId);
+    if (filter && Object.prototype.hasOwnProperty.call(filter, "projectId")) {
+      result = result.filter((s) => (s.projectId || null) === (filter.projectId || null));
+    }
     return result;
   }
   getStory(id) { return this._stories.get(id) || null; }
@@ -142,6 +148,9 @@ class Store {
     let result = Array.from(this._sessions.values());
     if (filter?.status) result = result.filter((s) => s.status === filter.status);
     if (filter?.storyId) result = result.filter((s) => s.storyId === filter.storyId);
+    if (filter && Object.prototype.hasOwnProperty.call(filter, "projectId")) {
+      result = result.filter((s) => (s.projectId || null) === (filter.projectId || null));
+    }
     return result;
   }
   getSession(id) { return this._sessions.get(id) || null; }
@@ -166,6 +175,9 @@ class Store {
     if (filter?.storyId) result = result.filter((r) => r.storyId === filter.storyId);
     if (filter?.prdId) result = result.filter((r) => r.prdId === filter.prdId);
     if (filter?.phase) result = result.filter((r) => r.phase === filter.phase);
+    if (filter && Object.prototype.hasOwnProperty.call(filter, "projectId")) {
+      result = result.filter((r) => (r.projectId || null) === (filter.projectId || null));
+    }
     return result;
   }
 
@@ -190,6 +202,9 @@ class Store {
     let result = Array.from(this._worktrees.values());
     if (filter?.status) result = result.filter((w) => w.status === filter.status);
     if (filter?.storyId) result = result.filter((w) => w.storyId === filter.storyId);
+    if (filter && Object.prototype.hasOwnProperty.call(filter, "projectId")) {
+      result = result.filter((w) => (w.projectId || null) === (filter.projectId || null));
+    }
     return result;
   }
   getWorktree(id) { return this._worktrees.get(id) || null; }

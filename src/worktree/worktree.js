@@ -22,7 +22,9 @@ class WorktreeManager {
   }
 
   async ensure(story) {
-    const existing = this.store.listWorktrees({ storyId: story.id, status: "active" });
+    const worktreeFilter = { storyId: story.id, status: "active" };
+    if (story.projectId) worktreeFilter.projectId = story.projectId;
+    const existing = this.store.listWorktrees(worktreeFilter);
     if (existing.length > 0) return existing[0];
 
     const branch = `story/${story.id}`;
@@ -30,7 +32,7 @@ class WorktreeManager {
     const wtPath = path.join(this.worktreeDir, story.id);
 
     const reused = await this._discoverExisting(branchRef, wtPath);
-    if (reused) return this._registerReusedWorktree(story.id, branch, reused.path);
+    if (reused) return this._registerReusedWorktree(story.id, story.projectId || null, branch, reused.path);
 
     const branchExists = await this._branchExists(branchRef);
     const args = branchExists
@@ -45,7 +47,7 @@ class WorktreeManager {
         branch,
         path: wtPath,
       });
-      return this._registerNewWorktree(story.id, branch, wtPath);
+      return this._registerNewWorktree(story.id, story.projectId || null, branch, wtPath);
     } catch (err) {
       const message = String(err?.stderr || err?.message || "");
       const recoverable = (
@@ -65,7 +67,7 @@ class WorktreeManager {
         path: fallback.path,
         error: message,
       });
-      return this._registerReusedWorktree(story.id, branch, fallback.path);
+      return this._registerReusedWorktree(story.id, story.projectId || null, branch, fallback.path);
     }
   }
 
@@ -198,10 +200,11 @@ class WorktreeManager {
     return items;
   }
 
-  _registerNewWorktree(storyId, branch, wtPath) {
+  _registerNewWorktree(storyId, projectId, branch, wtPath) {
     const wt = {
       id: `wt-${crypto.randomUUID().slice(0, 8)}`,
       storyId,
+      projectId: projectId || null,
       branch,
       path: wtPath,
       status: "active",
@@ -213,10 +216,11 @@ class WorktreeManager {
     return wt;
   }
 
-  _registerReusedWorktree(storyId, branch, wtPath) {
+  _registerReusedWorktree(storyId, projectId, branch, wtPath) {
     const wt = {
       id: `wt-${crypto.randomUUID().slice(0, 8)}`,
       storyId,
+      projectId: projectId || null,
       branch,
       path: wtPath,
       status: "active",
@@ -231,4 +235,3 @@ class WorktreeManager {
 }
 
 module.exports = { WorktreeManager };
-

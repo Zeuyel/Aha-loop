@@ -474,3 +474,98 @@ Deploy/restart process once current running sessions can be interrupted safely t
 - 需要把 vision→roadmap 分解的质量验证前移到生成后校验阶段，降低“推进快但偏题”的概率。
 
 ---
+## 2026-02-23 22:27:47 | Task: Frontend projectId filter+persistence | Phase: Starting
+
+### Context
+Update src/public/app.js to persist selectedProjectId, scope overview/stories/incidents/story API queries by projectId, and avoid cache collisions across projects.
+
+### Approach
+Add small URL/cache/persistence helpers, then update fetch call sites in target pages with minimal flow impact.
+
+### Potential Concerns
+Need to keep existing non-project pages stable and ensure cache clearing still works with scoped keys.
+
+---
+## 2026-02-23 22:29:31 | Task: projectId propagation | Phase: Starting
+
+### Context
+Implement projectId propagation across prd-loader/store/scheduler/worker/worktree with minimal tests, while avoiding unrelated changes.
+
+### Decision Point
+- Considering: enforce strict non-null projectId everywhere
+- Considering: allow null for backward compatibility
+- **Chosen:** allow nullable projectId but always write projectId field; detect and block only true cross-project ID conflicts.
+- **Reason:** preserves existing data compatibility while preventing accidental overwrite across projects.
+
+### Next Action
+Patch target files and add focused tests for store filter + loader conflict behavior.
+
+---
+
+## 2026-02-23 22:33:36 | Task: Frontend projectId filter+persistence | Phase: Complete
+
+### Summary
+Implemented project selection persistence and project-scoped query/cache behavior in src/public/app.js for overview/stories/incidents/story flows.
+
+### Key Decisions Made
+- Added helper-based projectId URL appending and cache key scoping to avoid broad refactors.
+- Scoped only target-page data fetches to projectId while preserving boot/projects fetch behavior.
+- Reused existing selection control flow and linked it to localStorage to keep UX unchanged.
+
+### Verification
+- node --check src/public/app.js passed.
+- Reviewed diff to ensure only requested logic paths changed in app.js.
+
+---
+## 2026-02-23 22:36:17 | Task: projectId propagation | Phase: Complete
+
+### Summary
+Implemented projectId propagation in loader/store/scheduler/worker/worktree and added focused regression tests.
+
+### Key Decisions Made
+- Kept projectId nullable for compatibility, but always wrote the field on new PRD/Story/Run/Session/Worktree entities.
+- Added strict loader conflict guard for same entity ID across different projectId values.
+- Extended store list filters with projectId without changing existing status/prd/story filters.
+
+### Validation
+- Ran syntax checks on all 5 target runtime files.
+- Ran targeted tests for store filters, loader conflict/progagation, scheduler dispatch, worker session snapshot, and worktree registration.
+
+---
+## 2026-02-23 22:41:43 | Task: 多 agent 审查问题整改 | Phase: Complete
+
+### Summary
+完成三路并行整改并合并：
+- 多项目基础隔离（projectId 贯穿实体/过滤/API）
+- 前端按项目过滤与项目选择持久化
+- stdout/stderr 渲染增强
+- 新增 acceptanceCriteria 从 loader→scheduler→phase prompt 的链路
+
+### Key Decisions Made
+- 先做“非破坏式多项目增强”，不直接重写主键模型。
+- 对跨项目同 ID 引入显式冲突错误（拒绝覆盖）而不是静默覆盖。
+- 项目启动默认不全局 reset（project-control start 路径）。
+
+### Validation
+- 全量测试通过：22/22。
+
+### Concerns for Future
+- 当前仍是单 runtime 实例；后续需做真正 project 级调度并发隔离（锁、队列分片、state namespace）。
+
+---
+## 2026-02-23 22:47:44 | Task: Multi-agent status report | Phase: Complete
+
+### Context
+User requested to continue and report current multi-agent remediation status.
+
+### Summary
+Collected current git/test state and prepared a concise status report covering completed work, validation, and remaining risks.
+
+### Verification
+- git status reviewed
+- full test suite: 22/22 pass
+
+### Next Focus
+Runtime-level multi-project isolation and stricter acceptance-criteria enforcement at state transition.
+
+---

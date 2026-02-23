@@ -139,15 +139,125 @@ class Monitor {
     }
   }
 
-  async getHealthSnapshot() {
+  _normalizeProjectId(value) {
+    const raw = String(value || "").trim();
+    return raw ? raw.slice(0, 256) : null;
+  }
+
+  _collectProjectRefs(entity) {
+    if (!entity || typeof entity !== "object") return [];
+
+    const refs = [];
+    const push = (value) => {
+      const normalized = this._normalizeProjectId(value);
+      if (!normalized) return;
+      refs.push(normalized);
+    };
+
+    push(entity.projectId);
+    if (Array.isArray(entity.projectIds)) {
+      for (const id of entity.projectIds) push(id);
+    }
+    if (entity.project && typeof entity.project === "object") {
+      push(entity.project.id);
+    }
+    return refs;
+  }
+
+  _entityMatchesProject(entity, projectId) {
+    if (!projectId) return true;
+    if (!entity || typeof entity !== "object") return false;
+
+    const refs = this._collectProjectRefs(entity);
+    if (refs.includes(projectId)) return true;
+
+    const normalizedId = this._normalizeProjectId(entity.id);
+    return Boolean(normalizedId && Array.isArray(entity.stories) && normalizedId === projectId);
+  }
+
+  _buildProjectScope(projectId) {
+    const normalizedProjectId = this._normalizeProjectId(projectId);
+    const prds = this.store.listPrds();
     const stories = this.store.listStories();
+    const runs = this.store.listRuns();
+
+    if (!normalizedProjectId) {
+      return { projectId: null, prds, stories, runs };
+    }
+
+    const prdIds = new Set();
+    const storyIds = new Set();
+    const runIds = new Set();
+
+    for (const prd of prds) {
+      if (this._entityMatchesProject(prd, normalizedProjectId)) {
+        prdIds.add(prd.id);
+      }
+    }
+    for (const story of stories) {
+      if (this._entityMatchesProject(story, normalizedProjectId)) {
+        storyIds.add(story.id);
+        if (story.prdId) prdIds.add(story.prdId);
+      }
+    }
+    for (const run of runs) {
+      if (this._entityMatchesProject(run, normalizedProjectId)) {
+        runIds.add(run.id);
+        if (run.storyId) storyIds.add(run.storyId);
+        if (run.prdId) prdIds.add(run.prdId);
+      }
+    }
+
+    let changed = true;
+    while (changed) {
+      changed = false;
+
+      for (const story of stories) {
+        if (storyIds.has(story.id)) continue;
+        if (!story.prdId || !prdIds.has(story.prdId)) continue;
+        storyIds.add(story.id);
+        changed = true;
+      }
+
+      for (const run of runs) {
+        if (runIds.has(run.id)) continue;
+        const linkedStory = run.storyId && storyIds.has(run.storyId);
+        const linkedPrd = run.prdId && prdIds.has(run.prdId);
+        if (!linkedStory && !linkedPrd) continue;
+        runIds.add(run.id);
+        if (run.storyId && !storyIds.has(run.storyId)) {
+          storyIds.add(run.storyId);
+        }
+        if (run.prdId && !prdIds.has(run.prdId)) {
+          prdIds.add(run.prdId);
+        }
+        changed = true;
+      }
+
+      for (const story of stories) {
+        if (!storyIds.has(story.id)) continue;
+        if (!story.prdId || prdIds.has(story.prdId)) continue;
+        prdIds.add(story.prdId);
+        changed = true;
+      }
+    }
+
+    return {
+      projectId: normalizedProjectId,
+      prds: prds.filter((prd) => prdIds.has(prd.id)),
+      stories: stories.filter((story) => storyIds.has(story.id)),
+      runs: runs.filter((run) => runIds.has(run.id)),
+    };
+  }
+
+  async getHealthSnapshot(options = {}) {
+    const projectId = this._normalizeProjectId(options?.projectId);
+    const { stories, prds, runs } = this._buildProjectScope(projectId);
     const storyStatus = {};
     for (const s of stories) storyStatus[s.status] = (storyStatus[s.status] || 0) + 1;
 
-    const prds = this.store.listPrds();
     const prdStatus = {};
     for (const p of prds) prdStatus[p.status] = (prdStatus[p.status] || 0) + 1;
-    const runs = this.store.listRuns();
     const runStatus = {};
     for (const r of runs) runStatus[r.status || "unknown"] = (runStatus[r.status || "unknown"] || 0) + 1;
 
@@ -583,8 +693,8 @@ class Monitor {
     await this._deadLetterWrite;
   }
 
-  _buildStoriesSnapshot(limit = 50) {
-    const allStories = this.store.listStories();
+  _buildStoriesSnapshot(limit = 50, projectId = null) {
+    const allStories = this._buildProjectScope(projectId).stories;
     const byStatus = {};
     const byPhase = {};
 
@@ -720,8 +830,11 @@ class Monitor {
     };
   }
 
-  _buildRunsSnapshot(limit = 100, storyId = null) {
-    const allRuns = this.store.listRuns(storyId ? { storyId } : undefined);
+  _buildRunsSnapshot(limit = 100, storyId = null, projectId = null) {
+    let allRuns = this._buildProjectScope(projectId).runs;
+    if (storyId) {
+      allRuns = allRuns.filter((run) => run.storyId === storyId);
+    }
     const byStatus = {};
     for (const run of allRuns) {
       const key = run.status || "unknown";
@@ -1257,6 +1370,7 @@ class Monitor {
     const reason = body.reason || "boot_start_requested";
     const autoResume = body.autoResume !== false;
     const resetBeforeLoad = body.resetBeforeLoad !== false;
+    const projectId = this._normalizeProjectId(body.projectId);
     const force = body.force === true;
     const files = this._bootInputFiles();
 
@@ -1296,7 +1410,8 @@ class Monitor {
           throw err;
         }
         const { loadPrds } = require("../pipeline/prd-loader");
-        await loadPrds(roadmapFile, this.store, this.logger, { resetBeforeLoad });
+        const options = projectId ? { resetBeforeLoad, projectId } : { resetBeforeLoad };
+        await loadPrds(roadmapFile, this.store, this.logger, options);
         if (autoResume && this.control?.resume) {
           this.control.resume(`boot_start_${mode}`, "boot_api");
         }
@@ -1321,7 +1436,8 @@ class Monitor {
           throw err;
         }
         const { loadActivePrd } = require("../pipeline/prd-loader");
-        await loadActivePrd(prdFile, this.store, this.logger, { resetBeforeLoad });
+        const options = projectId ? { resetBeforeLoad, projectId } : { resetBeforeLoad };
+        await loadActivePrd(prdFile, this.store, this.logger, options);
         if (autoResume && this.control?.resume) {
           this.control.resume(`boot_start_${mode}`, "boot_api");
         }
@@ -1374,12 +1490,16 @@ class Monitor {
 
     if (action === "start") {
       const mode = String(body.mode || project.bootMode || "resume_existing").toLowerCase();
+      const resetBeforeLoad = Object.prototype.hasOwnProperty.call(body, "resetBeforeLoad")
+        ? body.resetBeforeLoad === true
+        : false;
       const payload = await this._handleBootStart({
         mode,
         reason,
         autoResume: body.autoResume !== false,
-        resetBeforeLoad: body.resetBeforeLoad !== false,
+        resetBeforeLoad,
         force: body.force === true,
+        projectId,
         prdFile: body.prdFile || project.prdFile || undefined,
         roadmapFile: body.roadmapFile || project.roadmapFile || undefined,
       });
@@ -1771,7 +1891,8 @@ class Monitor {
         }
 
         if (pathname === "/health") {
-          const payload = await this.getHealthSnapshot();
+          const projectId = this._normalizeProjectId(requestUrl.searchParams.get("projectId"));
+          const payload = await this.getHealthSnapshot({ projectId });
           this._writeJson(res, 200, payload);
           return;
         }
@@ -1816,7 +1937,8 @@ class Monitor {
 
         if (pathname === "/stories") {
           const limit = this._parseLimit(requestUrl.searchParams);
-          this._writeJson(res, 200, this._buildStoriesSnapshot(limit));
+          const projectId = this._normalizeProjectId(requestUrl.searchParams.get("projectId"));
+          this._writeJson(res, 200, this._buildStoriesSnapshot(limit, projectId));
           return;
         }
 
@@ -1839,7 +1961,8 @@ class Monitor {
         if (pathname === "/runs") {
           const limit = this._parseLimit(requestUrl.searchParams);
           const storyId = requestUrl.searchParams.get("storyId");
-          this._writeJson(res, 200, this._buildRunsSnapshot(limit, storyId));
+          const projectId = this._normalizeProjectId(requestUrl.searchParams.get("projectId"));
+          this._writeJson(res, 200, this._buildRunsSnapshot(limit, storyId, projectId));
           return;
         }
 

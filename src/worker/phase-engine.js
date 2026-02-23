@@ -76,13 +76,26 @@ class PhaseEngine {
   }
 
   _buildPrompt(task) {
+    const acceptanceCriteria = Array.isArray(task.acceptanceCriteria)
+      ? task.acceptanceCriteria
+          .map((item) => String(item || "").trim())
+          .filter(Boolean)
+      : [];
+
     const lines = [
       "你是 Aha-Loop MQ 执行代理。",
       `当前 Story: ${task.storyId}`,
+      `Story 标题: ${task.storyTitle || task.storyId}`,
       `所属 PRD: ${task.prdId || "unknown"}`,
       `执行阶段: ${task.phase}`,
       `执行阶段(规范化): ${task.phase === "review" ? "review (quality-review)" : task.phase}`,
       `工作目录: ${task.worktreePath || task.workspacePath || process.cwd()}`,
+      ...(acceptanceCriteria.length > 0
+        ? [
+            "验收标准（必须逐条对齐，不允许遗漏）：",
+            ...acceptanceCriteria.slice(0, 50).map((item, idx) => `- [AC${idx + 1}] ${item}`),
+          ]
+        : ["验收标准: 未提供（请在输出中明确说明基于当前阶段目标完成情况）"]),
       "要求：",
       "1) 严格完成当前阶段目标，不跨阶段修改。",
       "2) 变更后给出简短结果摘要。",

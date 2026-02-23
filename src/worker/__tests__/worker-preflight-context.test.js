@@ -102,15 +102,24 @@ runCase("preflight writes runtime snapshot instead of mutating prd.json", () => 
   withTempWorktree(
     {
       prdId: "PRD-010",
+      projectId: "proj-010",
       stories: [{ id: "PRD-010-S03", status: "dead", phase: "plan", attempt: 4, maxAttempts: 4 }],
     },
     (root) => {
       const worker = createWorker();
       const result = worker._preflightStoryContext(
-        { worktreePath: root, prdId: "PRD-010", phase: "review", attempt: 4, maxAttempts: 4 },
+        {
+          worktreePath: root,
+          prdId: "PRD-010",
+          projectId: "proj-010",
+          phase: "review",
+          attempt: 4,
+          maxAttempts: 4,
+        },
         {
           id: "PRD-010-S03",
           prdId: "PRD-010",
+          projectId: "proj-010",
           status: "queued",
           phase: "review",
           attempt: 4,
@@ -129,10 +138,12 @@ runCase("preflight writes runtime snapshot instead of mutating prd.json", () => 
         fs.readFileSync(path.join(root, ".aha-loop", "runtime", "story-context.json"), "utf8"),
       );
       assert.equal(runtime.prdId, "PRD-010");
+      assert.equal(runtime.projectId, "proj-010");
       assert.equal(runtime.stories["PRD-010-S03"].status, "queued");
       assert.equal(runtime.stories["PRD-010-S03"].phase, "review");
       assert.equal(runtime.stories["PRD-010-S03"].attempt, 4);
       assert.equal(runtime.stories["PRD-010-S03"].maxAttempts, 4);
+      assert.equal(runtime.stories["PRD-010-S03"].projectId, "proj-010");
     },
   );
 });
