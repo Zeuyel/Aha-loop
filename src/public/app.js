@@ -1549,8 +1549,27 @@
     return "neutral";
   }
 
+  function normalizeLogText(value) {
+    const raw = typeof value === "string"
+      ? value
+      : Array.isArray(value)
+        ? value.join("\n")
+        : value == null
+          ? ""
+          : String(value);
+
+    // Remove ANSI escape sequences and normalize control chars for readable rendering.
+    return raw
+      .replace(/\u001B\[[0-9;?]*[ -/]*[@-~]/g, "")
+      .replace(/\u009B[0-9;?]*[ -/]*[@-~]/g, "")
+      .replace(/\r\n?/g, "\n")
+      .replace(/\u0000/g, "")
+      .replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+      .replace(/\t/g, "  ");
+  }
+
   function buildLogRows(text, maxLines = 240) {
-    const lines = String(text || "").replace(/\r\n/g, "\n").split("\n");
+    const lines = String(text || "").split("\n");
     if (lines.length === 1 && lines[0] === "") return { rows: [], total: 0 };
     if (lines.length <= maxLines) {
       return {
@@ -1574,19 +1593,29 @@
     };
   }
 
-  function renderLogPanel(stream, text, { maxLines = 240 } = {}) {
-    const safeText = String(text || "");
+  function renderLogPanel(
+    stream,
+    text,
+    { maxLines = 240, totalChars = null, truncated = false, tailChars = null } = {},
+  ) {
+    const safeText = normalizeLogText(text);
     const { rows, total } = buildLogRows(safeText, maxLines);
     const nonEmpty = safeText.trim().length > 0;
     const badgeClass = stream === "stderr" ? "status-bad" : "status-info";
     const title = stream === "stderr" ? "stderr" : "stdout";
+    const visibleChars = safeText.length;
+    const sourceChars = Number.isFinite(totalChars) ? totalChars : visibleChars;
+    const isTruncated = Boolean(truncated) || sourceChars > visibleChars;
 
     if (!nonEmpty) {
+      const emptyMeta = isTruncated
+        ? `tail only · ${formatBytes(visibleChars)} / ${formatBytes(sourceChars)}`
+        : "empty";
       return `
         <article class="log-panel">
           <div class="log-head">
             <span class="status-pill ${badgeClass}">${title}</span>
-            <span class="panel-meta">empty</span>
+            <span class="panel-meta">${emptyMeta}</span>
           </div>
           <div class="log-empty">no ${title} output</div>
         </article>
@@ -1613,11 +1642,19 @@
       })
       .join("");
 
+    const metaParts = [`${total} lines`, `${formatBytes(visibleChars)}`];
+    if (isTruncated) {
+      metaParts.push(`tail only (${formatBytes(visibleChars)} / ${formatBytes(sourceChars)})`);
+    }
+    if (Number.isFinite(tailChars) && tailChars > 0) {
+      metaParts.push(`tailChars=${tailChars}`);
+    }
+
     return `
       <article class="log-panel">
         <div class="log-head">
           <span class="status-pill ${badgeClass}">${title}</span>
-          <span class="panel-meta">${total} lines · ${formatBytes(safeText.length)}</span>
+          <span class="panel-meta">${metaParts.join(" · ")}</span>
         </div>
         <div class="log-scroll">
           <table class="log-table">
@@ -1652,8 +1689,18 @@
         <div class="inline-metrics">${cards}</div>
         ${errorBlock}
         <div class="log-grid">
-          ${renderLogPanel("stdout", output.stdout || "", { maxLines: 220 })}
-          ${renderLogPanel("stderr", output.stderr || "", { maxLines: 220 })}
+          ${renderLogPanel("stdout", output.stdout || "", {
+            maxLines: 220,
+            totalChars: output.stdoutLength,
+            truncated: output.stdoutTruncated,
+            tailChars: output.tailChars,
+          })}
+          ${renderLogPanel("stderr", output.stderr || "", {
+            maxLines: 220,
+            totalChars: output.stderrLength,
+            truncated: output.stderrTruncated,
+            tailChars: output.tailChars,
+          })}
         </div>
       </div>
     `;
@@ -1804,8 +1851,18 @@
         <div class="phase-meta">${esc(meta)}</div>
         ${errorBlock}
         <div class="log-grid">
-          ${renderLogPanel("stdout", runDetail?.output?.stdout || "", { maxLines: 120 })}
-          ${renderLogPanel("stderr", runDetail?.output?.stderr || "", { maxLines: 120 })}
+          ${renderLogPanel("stdout", runDetail?.output?.stdout || "", {
+            maxLines: 120,
+            totalChars: runDetail?.output?.stdoutLength,
+            truncated: runDetail?.output?.stdoutTruncated,
+            tailChars: runDetail?.output?.tailChars,
+          })}
+          ${renderLogPanel("stderr", runDetail?.output?.stderr || "", {
+            maxLines: 120,
+            totalChars: runDetail?.output?.stderrLength,
+            truncated: runDetail?.output?.stderrTruncated,
+            tailChars: runDetail?.output?.tailChars,
+          })}
         </div>
       </article>
     `;

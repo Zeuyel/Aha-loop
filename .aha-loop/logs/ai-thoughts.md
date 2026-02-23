@@ -440,3 +440,37 @@ Deploy/restart process once current running sessions can be interrupted safely t
 当前仓库是静态检查结论，未启动实时服务验证 UI/接口联调；若需“现在是否在线可用”，应现场启动并请求 monitor API。
 
 ---
+## 2026-02-23 22:15:30 | Task: 多项目编排审计 + 前端日志渲染修复 | Phase: Starting
+
+### Context
+用户要求三件事：
+1) 判断当前后端启动与前端展示是否仍偏单项目；
+2) 修复前端 stdout/stderr 渲染；
+3) 审核后端编排是否存在 mock、是否过度追求推进而弱化 story 需求。
+
+### Approach
+先给出代码级证据，再先修复前端日志渲染（可直接落地），最后输出后端审计结论和多项目改造建议。
+
+### Potential Concerns
+多项目并行不是单点改动，涉及状态模型主键、loader 命名空间和 project 级 runtime 隔离，不能在无设计变更下草率修改。
+
+---
+## 2026-02-23 22:20:07 | Task: 多项目编排审计 + 前端日志渲染修复 | Phase: Complete
+
+### Summary
+完成前端 stdout/stderr 渲染修复（ANSI/控制字符清洗、tail 截断可视化元信息），并完成后端多项目与编排策略审计。
+
+### Key Decisions Made
+- 不在本轮直接改造多项目数据模型（涉及全链路主键命名空间与并发隔离）。
+- 先修复前端日志可读性与可观测性，确保排障效率。
+- 审计结论采用“代码证据 + 风险等级”输出，避免只给主观判断。
+
+### Learnings
+- 当前项目“有 Projects 页面”但 runtime 仍是全局 store/runtime，尚非真正多项目并行隔离。
+- 现有成功判据偏执行完成（exit/phase result），缺少 story 需求满足度的硬校验门。
+
+### Concerns for Future
+- 需要引入 projectId 贯穿实体与接口过滤，否则多项目会出现 ID 冲突和状态互相覆盖风险。
+- 需要把 vision→roadmap 分解的质量验证前移到生成后校验阶段，降低“推进快但偏题”的概率。
+
+---
