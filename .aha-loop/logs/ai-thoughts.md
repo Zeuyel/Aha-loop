@@ -696,3 +696,22 @@ Runtime-level multi-project isolation and stricter acceptance-criteria enforceme
 短期可继续用现架构，优先做 Phase1 软隔离（公平调度+项目配额+路由键可观测），再视增长决定是否进入分片。
 
 ---
+## 2026-02-23 23:12:44 | Task: Phase1软隔离开工 | Phase: Complete
+
+### Context
+用户要求“开始吧”，按既定轻量路线先落地项目级并发配额与公平调度。
+
+### Delivered
+- 新增 maxConcurrencyPerProject 配置（env/CLI）
+- 调度器改为按项目轮转分发，并在分发规划阶段执行项目并发上限约束
+- Worker 增加项目级背压检查（达到项目上限时返回 WORKER_BACKPRESSURE）
+- SessionPool 增加 getActiveCountByProject 查询能力
+- 新增公平调度与项目并发上限测试
+
+### Validation
+- node --test 全量通过：26/26
+
+### Next Action
+若继续推进，可把项目级运行指标写入 /health 并接入前端项目看板。
+
+---

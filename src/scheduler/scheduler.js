@@ -169,14 +169,16 @@ class Scheduler {
     const prdMap = new Map(prds.map((prd) => [prd.id, prd]));
 
     const runningCount = currentStories.filter((s) => s.status === "running" || s.status === "queued").length;
-    let availableSlots = this.config.maxConcurrency - runningCount;
-    for (const story of currentStories.filter((s) => s.status === "pending")) {
-      if (availableSlots <= 0) break;
-      if (!this._isDispatchablePrd(story.prdId, prdMap)) continue;
-      if (!this._dependenciesMet(story, storyMap, prdMap)) continue;
-
+    const availableSlots = this.config.maxConcurrency - runningCount;
+    const pendingCandidates = currentStories.filter((story) => (
+      story.status === "pending"
+      && this._isDispatchablePrd(story.prdId, prdMap)
+      && this._dependenciesMet(story, storyMap, prdMap)
+    ));
+    const inFlightByProject = this._buildProjectInFlightMap(currentStories);
+    const dispatchPlan = this._buildDispatchPlan(pendingCandidates, availableSlots, inFlightByProject);
+    for (const story of dispatchPlan) {
       await this._dispatch(story);
-      availableSlots--;
     }
 
     // Step 4: PRD 完成度
@@ -440,6 +442,68 @@ class Scheduler {
 
   _isPrdRef(ref) {
     return /^PRD[-_]/i.test(String(ref || "").trim());
+  }
+
+  _projectKey(projectId) {
+    const normalized = String(projectId || "").trim();
+    return normalized || "__default__";
+  }
+
+  _buildProjectInFlightMap(stories) {
+    const map = new Map();
+    for (const story of stories) {
+      if (story.status !== "running" && story.status !== "queued") continue;
+      const key = this._projectKey(story.projectId);
+      map.set(key, (map.get(key) || 0) + 1);
+    }
+    return map;
+  }
+
+  _buildDispatchPlan(pendingStories, availableSlots, inFlightByProject = new Map()) {
+    if (!Number.isFinite(availableSlots) || availableSlots <= 0) return [];
+    if (!Array.isArray(pendingStories) || pendingStories.length === 0) return [];
+
+    const projectLimit = this._normalizePositiveInt(this.config.maxConcurrencyPerProject);
+    const buckets = new Map();
+    for (const story of pendingStories) {
+      const key = this._projectKey(story.projectId);
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push(story);
+      if (!inFlightByProject.has(key)) inFlightByProject.set(key, 0);
+    }
+
+    const keys = Array.from(buckets.keys()).sort((a, b) => {
+      const inFlightA = inFlightByProject.get(a) || 0;
+      const inFlightB = inFlightByProject.get(b) || 0;
+      if (inFlightA !== inFlightB) return inFlightA - inFlightB;
+      return a.localeCompare(b);
+    });
+
+    const plan = [];
+    while (plan.length < availableSlots) {
+      let progressed = false;
+      for (const key of keys) {
+        const bucket = buckets.get(key);
+        if (!bucket || bucket.length === 0) continue;
+
+        const inFlightCount = inFlightByProject.get(key) || 0;
+        if (projectLimit && inFlightCount >= projectLimit) continue;
+
+        const story = bucket.shift();
+        plan.push(story);
+        inFlightByProject.set(key, inFlightCount + 1);
+        progressed = true;
+        if (plan.length >= availableSlots) break;
+      }
+      if (!progressed) break;
+    }
+    return plan;
+  }
+
+  _normalizePositiveInt(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    return Math.floor(n);
   }
 
   /** 分发 story 到 RabbitMQ */

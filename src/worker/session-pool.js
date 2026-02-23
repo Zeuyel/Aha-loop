@@ -298,6 +298,18 @@ class SessionPool {
 
   get size() { return this._active.size; }
 
+  getActiveCountByProject(projectId) {
+    const normalized = projectId == null ? null : String(projectId).trim() || null;
+    let count = 0;
+    for (const [, entry] of this._active) {
+      const sessionProjectId = entry?.session?.projectId == null
+        ? null
+        : String(entry.session.projectId).trim() || null;
+      if (sessionProjectId === normalized) count += 1;
+    }
+    return count;
+  }
+
   isSessionActive(sessionId) {
     if (!sessionId) return false;
     return this._active.has(sessionId);

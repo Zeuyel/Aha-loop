@@ -252,6 +252,21 @@ class Worker {
     if (this.sessionPool.size >= this.config.maxConcurrency) {
       throw new WorkerBackpressureError(`concurrency limit reached (${this.config.maxConcurrency})`);
     }
+    const projectConcurrencyLimit = this._normalizePositiveInt(this.config.maxConcurrencyPerProject);
+    if (projectConcurrencyLimit) {
+      const projectActiveCount = typeof this.sessionPool.getActiveCountByProject === "function"
+        ? this.sessionPool.getActiveCountByProject(effectiveProjectId)
+        : this.store.listSessions({ status: "running" }).filter((session) => {
+          const sessionProjectId = session?.projectId || null;
+          return sessionProjectId === effectiveProjectId;
+        }).length;
+      if (projectActiveCount >= projectConcurrencyLimit) {
+        throw new WorkerBackpressureError(
+          `project concurrency limit reached (project=${effectiveProjectId || "_default"} `
+          + `${projectActiveCount}/${projectConcurrencyLimit})`,
+        );
+      }
+    }
 
     const startedAt = nowEast8Iso();
     const runningStory = this.store.transitionStory(storyId, "running", {

@@ -28,6 +28,7 @@ const DEFAULTS = {
   // 调度
   schedulerPollMs: 5_000,
   maxConcurrency: 3,
+  maxConcurrencyPerProject: 0, // <=0 means disabled
   maxAttempts: 3,
   storyTimeoutMs: 0, // <=0 means disabled (no hard runtime timeout)
   storyInactivityTimeoutMs: 600_000, // kill only when no stdout/stderr activity
@@ -92,6 +93,9 @@ function loadConfig(argv = []) {
   if (process.env.RMQ_POLL_MS) config.rmqPollMs = parseInt(process.env.RMQ_POLL_MS, 10);
   if (process.env.RMQ_ACK_MODE) config.rmqAckMode = process.env.RMQ_ACK_MODE;
   if (process.env.MAX_CONCURRENCY) config.maxConcurrency = parseInt(process.env.MAX_CONCURRENCY, 10);
+  if (process.env.MAX_CONCURRENCY_PER_PROJECT) {
+    config.maxConcurrencyPerProject = parseInt(process.env.MAX_CONCURRENCY_PER_PROJECT, 10);
+  }
   if (process.env.MAX_ATTEMPTS) config.maxAttempts = parseInt(process.env.MAX_ATTEMPTS, 10);
   if (process.env.STORY_TIMEOUT_MS) config.storyTimeoutMs = parseInt(process.env.STORY_TIMEOUT_MS, 10);
   if (process.env.STORY_INACTIVITY_TIMEOUT_MS) {
@@ -153,6 +157,9 @@ function loadConfig(argv = []) {
         break;
       case "--max-concurrency":
         config.maxConcurrency = parseInt(argv[++i], 10);
+        break;
+      case "--max-concurrency-per-project":
+        config.maxConcurrencyPerProject = parseInt(argv[++i], 10);
         break;
       case "--monitor-port":
         config.monitorHttpPort = parseInt(argv[++i], 10);
