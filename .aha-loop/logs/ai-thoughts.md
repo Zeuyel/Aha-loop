@@ -410,3 +410,33 @@ User requested immediate repair and root cause for RUNNING_WITHOUT_SESSION anoma
 Deploy/restart process once current running sessions can be interrupted safely to activate code fix in runtime.
 
 ---
+## 2026-02-23 21:58:10 | Task: 项目进展盘点 | Phase: Starting
+
+### Context
+用户要求查看当前项目进展，重点是前端显示、后端编排、前后端耦合度。
+
+### Approach
+先读取仓库结构与关键文档，再检查前后端代码入口和调用链，最后给出证据化结论与风险点。
+
+### Potential Concerns
+部分功能可能在分支或未提交改动中，需结合 git 状态判断进度真实性。
+
+---
+## 2026-02-23 22:06:41 | Task: 项目进展盘点 | Phase: Analysis
+
+### Decision Point
+- Considering: 仅看 README/架构文档判断进度
+- Considering: 读取状态快照 + 日志 + 代码 + 测试综合判断
+- **Chosen:** 综合判断
+- **Reason:** 用户要的是“当前进展 + 耦合度”，只看文档会高估成熟度。
+
+### Observations
+- 前端页面与交互链路已成型（多页面 + 轮询 + 控制动作）。
+- 后端编排核心链路完整（scheduler/worker/queue/control + monitor API）。
+- 存在已知未完成项：前端规则配置按钮提示后端未提供对应变更接口。
+- 运行日志显示历史上出现过 session 异常、队列告警、AMQP 连接重置。
+
+### Uncertainty
+当前仓库是静态检查结论，未启动实时服务验证 UI/接口联调；若需“现在是否在线可用”，应现场启动并请求 monitor API。
+
+---
