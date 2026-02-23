@@ -682,3 +682,17 @@ Runtime-level multi-project isolation and stricter acceptance-criteria enforceme
 - 运行时隔离先按 Phase1 软隔离推进，避免一次性重构风险。
 
 ---
+## 2026-02-23 23:07:12 | Task: 5项目容量评估 | Phase: Complete
+
+### Context
+用户询问在“最多5个项目”前提下，当前架构是否足够。
+
+### Decision Point
+- 结论：当前架构对 <=5 项目“可用”，但属于共享运行时+逻辑作用域隔离，不是强隔离。
+- 条件：并发负载中等、允许单实例故障域、无严格项目级SLA隔离要求。
+- 风险：全局队列/全局并发/全局sessionPool/单state文件，热点项目可能挤占资源。
+
+### Recommendation
+短期可继续用现架构，优先做 Phase1 软隔离（公平调度+项目配额+路由键可观测），再视增长决定是否进入分片。
+
+---
