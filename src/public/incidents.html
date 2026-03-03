@@ -1,0 +1,103 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aha Loop MQ · Incidents</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body data-page="incidents">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>AHA LOOP MQ</h1>
+        <p>Control plane</p>
+      </div>
+      <nav class="nav">
+        <button class="nav-item" data-page="projects"><i data-lucide="folder-kanban"></i><span>Projects</span></button>
+        <button class="nav-item" data-page="overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></button>
+        <button class="nav-item" data-page="stories"><i data-lucide="book-open"></i><span>Stories</span></button>
+        <button class="nav-item active" data-page="incidents"><i data-lucide="alert-triangle"></i><span>Incidents</span></button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="header">
+        <div>
+          <h2 id="header-title">INCIDENTS DASHBOARD</h2>
+          <p id="header-subtitle">alerts + dead letters · triage · recovery actions</p>
+        </div>
+        <div id="header-actions" class="header-actions">
+          <div id="header-boot-cta" class="boot-cta hidden">
+            <span>GUIDE</span>
+            <small>FLOW</small>
+          </div>
+          <div id="header-chips" class="chips hidden">
+            <span id="chip-env" class="chip">env: single-instance</span>
+            <span id="chip-timezone" class="chip">timezone: UTC+8</span>
+            <span id="chip-refresh" class="chip chip-accent">refresh 5s</span>
+          </div>
+        </div>
+      </header>
+
+      <section id="page-incidents" class="page active">
+        <div class="grid two-col-main grow">
+          <div class="col">
+            <article class="panel">
+              <div class="panel-head"><h3>Live Alerts</h3></div>
+              <ul id="incidents-alerts" class="list"></ul>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head"><h3>Rule Config</h3></div>
+              <div id="incidents-rules" class="rule-config">loading...</div>
+            </article>
+
+            <article class="panel grow">
+              <div class="panel-head">
+                <h3>Dead Queue Messages</h3>
+                <div class="control-actions">
+                  <span id="incidents-dead-count" class="panel-meta">0</span>
+                  <button class="btn btn-soft" id="incidents-revive-dead" data-control="revive_dead">Reset Dead -> Pending</button>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>storyId</th><th>phase</th><th>attempt</th><th>trace</th><th>error</th></tr>
+                  </thead>
+                  <tbody id="incidents-dead-body"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+
+          <div class="col side">
+            <article class="panel">
+              <div class="panel-head"><h3>Runtime Command</h3></div>
+              <div id="incidents-command-state" class="json-view">loading...</div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head"><h3>Selected Message</h3></div>
+              <div id="incidents-dead-detail" class="json-view">click a row to inspect</div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head"><h3>Failure Taxonomy</h3></div>
+              <div id="incidents-failure" class="inline-metrics"></div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

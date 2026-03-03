@@ -1,0 +1,49 @@
+{
+  "name": "aha-loop-mq",
+  "version": "0.1.0",
+  "description": "Aha-Loop MQ 执行引擎 — 状态机 + RabbitMQ + Worktree 并行调度框架",
+  "main": "src/index.js",
+  "bin": {
+    "aha-loop": "bin/aha-loop.js",
+    "aha-loop-mq": "bin/aha-loop.js",
+    "aha-loop-web": "bin/aha-loop-web.js"
+  },
+  "scripts": {
+    "start": "node bin/aha-loop.js",
+    "dev": "node --watch src/index.js",
+    "ui": "node bin/aha-loop.js --resume-from-state",
+    "web": "node bin/aha-loop-web.js",
+    "web:dev": "node --watch src/web.js",
+    "pack:check": "npm pack --dry-run"
+  },
+  "files": [
+    "bin",
+    "src",
+    "templates/project.vision.template.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "aha-loop",
+    "workflow",
+    "orchestration",
+    "rabbitmq",
+    "kanban",
+    "multi-project"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YougLin-dev/Aha-Loop.git"
+  },
+  "bugs": {
+    "url": "https://github.com/YougLin-dev/Aha-Loop/issues"
+  },
+  "homepage": "https://github.com/YougLin-dev/Aha-Loop#readme",
+  "license": "MIT",
+  "dependencies": {
+    "amqplib": "^0.10.9"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

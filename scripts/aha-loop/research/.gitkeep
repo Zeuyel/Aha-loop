@@ -1,9 +1,0 @@
-# Research Reports Directory
-
-This directory stores research reports generated during the Research phase.
-
-Files created here:
-- [STORY_ID]-research.md - Research reports for each story
-- [STORY_ID]-quality.md - Quality review reports
-
-This directory is automatically created by Aha Loop during execution.

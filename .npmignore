@@ -1,0 +1,14 @@
+src/**/__tests__/
+src/__tests__/
+*.log
+*.png
+*.pen
+tmp_*
+.aha-loop/
+.agents/
+.codex/
+.claude/
+.god/
+.kiro/
+.vendor/
+.worktrees/

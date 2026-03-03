@@ -1,0 +1,140 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aha Loop MQ · Overview</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body data-page="overview">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>AHA LOOP MQ</h1>
+        <p>Control plane</p>
+      </div>
+      <nav class="nav">
+        <button class="nav-item" data-page="projects"><i data-lucide="folder-kanban"></i><span>Projects</span></button>
+        <button class="nav-item active" data-page="overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></button>
+        <button class="nav-item" data-page="stories"><i data-lucide="book-open"></i><span>Stories</span></button>
+        <button class="nav-item" data-page="incidents"><i data-lucide="alert-triangle"></i><span>Incidents</span></button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="header">
+        <div>
+          <h2 id="header-title">MQ COMMAND CENTER</h2>
+          <p id="header-subtitle">real-time queue telemetry · scheduler control · run intelligence</p>
+        </div>
+        <div id="header-actions" class="header-actions">
+          <div id="header-boot-cta" class="boot-cta hidden">
+            <span>GUIDE</span>
+            <small>FLOW</small>
+          </div>
+          <div id="header-chips" class="chips">
+            <span id="chip-env" class="chip">env: single-instance</span>
+            <span id="chip-timezone" class="chip">timezone: UTC+8</span>
+            <span id="chip-refresh" class="chip chip-accent">refresh 5s</span>
+          </div>
+        </div>
+      </header>
+
+      <section id="page-overview" class="page active">
+        <article class="status-ribbon">
+          <strong id="ov-system-title">System Healthy</strong>
+          <span id="ov-system-meta">broker connected · scheduler alive · worker alive</span>
+        </article>
+
+        <div class="grid kpi-grid">
+          <article class="panel kpi-card">
+            <h4>WORK</h4>
+            <div id="ov-work" class="kpi-value">0</div>
+            <p id="ov-work-meta" class="mono">consumer=0</p>
+            <p id="ov-work-spark" class="spark-text">_</p>
+          </article>
+          <article class="panel kpi-card">
+            <h4>RETRY</h4>
+            <div id="ov-retry" class="kpi-value">0</div>
+            <p id="ov-retry-meta" class="mono">rate=0%</p>
+            <p id="ov-retry-spark" class="spark-text">_</p>
+          </article>
+          <article class="panel kpi-card">
+            <h4>DEAD</h4>
+            <div id="ov-dead" class="kpi-value">0</div>
+            <p id="ov-dead-meta" class="mono">persisted=0</p>
+            <p id="ov-dead-spark" class="spark-text">_</p>
+          </article>
+          <article class="panel kpi-card">
+            <h4>LATENCY P95</h4>
+            <div id="ov-latency" class="kpi-value">0ms</div>
+            <p id="ov-latency-meta" class="mono">window=5m</p>
+            <p id="ov-latency-spark" class="spark-text">_</p>
+          </article>
+        </div>
+
+        <div class="grid two-col-main grow">
+          <div class="col">
+            <article class="panel">
+              <div class="panel-head">
+                <h3>Queue / Latency Timeline</h3>
+                <span class="panel-meta">history-backed series · queue depth + latency p95</span>
+              </div>
+              <div id="overview-trend-meta" class="panel-meta subtle">window 15m · waiting for samples</div>
+              <div id="overview-trend" class="trend-grid"></div>
+              <div id="overview-latency" class="inline-metrics"></div>
+              <div id="overview-queue-deltas" class="inline-metrics top-gap-8"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <h3>Execution Pulse</h3>
+                <span class="panel-meta">throughput, success/fail mix, retry/dead pressure</span>
+              </div>
+              <div id="overview-flow-metrics" class="inline-metrics"></div>
+              <div id="overview-hotspots" class="list top-gap-8"></div>
+            </article>
+
+            <article class="panel grow">
+              <div class="panel-head">
+                <h3>Story Lifecycle Stream</h3>
+                <span class="panel-meta">storyId · phase · status · attempt · traceId</span>
+              </div>
+              <div id="overview-stories-body" class="stream-list"></div>
+            </article>
+          </div>
+
+          <div class="col side">
+            <article class="panel">
+              <div class="panel-head"><h3>Live Alerts</h3></div>
+              <ul id="overview-alerts" class="list"></ul>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head"><h3>Run Outcome Mix</h3></div>
+              <div id="overview-run-status" class="phase-stack"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head"><h3>Story Phase Pressure</h3></div>
+              <div id="overview-phase-breakdown" class="phase-stack"></div>
+            </article>
+
+            <article class="panel panel-dark">
+              <div class="panel-head"><h3>Render Status</h3></div>
+              <div id="overview-render-status" class="json-view json-view-dark">loading...</div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

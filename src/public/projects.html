@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aha Loop MQ · Projects</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body data-page="projects">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>AHA LOOP MQ</h1>
+        <p>Control plane</p>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-page="projects"><i data-lucide="folder-kanban"></i><span>Projects</span></button>
+        <button class="nav-item" data-page="overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></button>
+        <button class="nav-item" data-page="stories"><i data-lucide="book-open"></i><span>Stories</span></button>
+        <button class="nav-item" data-page="incidents"><i data-lucide="alert-triangle"></i><span>Incidents</span></button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="header">
+        <div>
+          <h2 id="header-title">PROJECTS</h2>
+          <p id="header-subtitle">kanban board · project lifecycle · click to enter details</p>
+        </div>
+        <div id="header-actions" class="header-actions">
+          <span id="project-total" class="project-stat-chip">total: 0 projects</span>
+          <button class="btn btn-accent project-new-btn" data-project-modal="open">New Project</button>
+          <div id="header-boot-cta" class="boot-cta hidden">
+            <span>GUIDE</span>
+            <small>FLOW</small>
+          </div>
+          <div id="header-chips" class="chips hidden">
+            <span id="chip-env" class="chip">env: single-instance</span>
+            <span id="chip-timezone" class="chip">timezone: UTC+8</span>
+            <span id="chip-refresh" class="chip chip-accent">refresh 5s</span>
+          </div>
+        </div>
+      </header>
+
+      <section id="page-projects" class="page active">
+        <div class="projects-board">
+          <article class="project-column">
+            <div class="project-column-head">
+              <h3>Backlog</h3>
+              <span id="projects-backlog-count" class="project-count">0</span>
+            </div>
+            <div id="projects-backlog-list" class="project-cards"></div>
+          </article>
+
+          <article class="project-column">
+            <div class="project-column-head">
+              <h3>In Progress</h3>
+              <span id="projects-in-progress-count" class="project-count info">0</span>
+            </div>
+            <div id="projects-in-progress-list" class="project-cards"></div>
+          </article>
+
+          <article class="project-column">
+            <div class="project-column-head">
+              <h3>Review</h3>
+              <span id="projects-review-count" class="project-count warn">0</span>
+            </div>
+            <div id="projects-review-list" class="project-cards"></div>
+          </article>
+
+          <article class="project-column">
+            <div class="project-column-head">
+              <h3>Done</h3>
+              <span id="projects-done-count" class="project-count ok">0</span>
+            </div>
+            <div id="projects-done-list" class="project-cards"></div>
+          </article>
+        </div>
+
+        <article class="panel" style="margin-top:12px;">
+          <div class="panel-head">
+            <h3>Project Runtime Controls</h3>
+            <span class="panel-meta">start / pause / resume / run control in one place</span>
+          </div>
+          <div class="control-grid">
+            <div class="control-targets">
+              <label>
+                <span>project</span>
+                <select id="project-control-id" class="input mono-input control-input"></select>
+              </label>
+              <label>
+                <span>start mode</span>
+                <select id="project-control-mode" class="input mono-input control-input">
+                  <option value="resume_existing">resume_existing</option>
+                  <option value="reload_from_prd">reload_from_prd</option>
+                  <option value="reload_from_roadmap">reload_from_roadmap</option>
+                </select>
+              </label>
+              <label>
+                <span>storyId (optional)</span>
+                <input id="control-story-id" class="input mono-input control-input" placeholder="PRD-xxx-Sxx">
+              </label>
+              <label>
+                <span>runId (optional)</span>
+                <input id="control-run-id" class="input mono-input control-input" placeholder="run-xxxx">
+              </label>
+              <label>
+                <span>PRD File (optional)</span>
+                <input id="project-control-prd-file" class="input mono-input control-input" placeholder="C:\repo\project\.aha-loop\prd.json">
+              </label>
+              <label>
+                <span>Roadmap File (optional)</span>
+                <input id="project-control-roadmap-file" class="input mono-input control-input" placeholder="C:\repo\project\.aha-loop\project.roadmap.json">
+              </label>
+            </div>
+            <div class="control-actions">
+              <button class="btn btn-accent" data-project-control="start">Start</button>
+              <button class="btn btn-dark" data-project-control="pause">Pause</button>
+              <button class="btn btn-ok" data-project-control="resume">Resume</button>
+              <button class="btn btn-warn" data-control="restart">Restart Story/Run</button>
+              <button class="btn btn-soft" data-control="approve_merge">Approve Merge</button>
+              <button class="btn btn-bad" data-control="cancel">Cancel Story/Run</button>
+            </div>
+            <div id="project-control-state" class="mono subtle">project control ready</div>
+            <div id="control-result" class="mono subtle">no command sent</div>
+          </div>
+        </article>
+
+        <div id="project-modal" class="project-modal hidden">
+          <button type="button" class="project-modal-backdrop" data-project-modal="close" aria-label="Close"></button>
+          <article class="project-modal-card">
+            <div class="project-modal-header">
+              <div>
+                <h3 id="boot-step-title">NEW PROJECT SETUP</h3>
+                <p id="boot-step-subtitle" class="panel-meta">Step 1 Workspace · Step 2 Vision · Step 3 Preflight · Step 4 Boot</p>
+              </div>
+              <button type="button" class="btn btn-accent" data-project-modal="close">GUIDE FLOW</button>
+            </div>
+
+            <div class="project-create-form">
+              <input id="project-edit-id" type="hidden">
+              <div class="project-create-grid">
+                <label>
+                  <span>Name</span>
+                  <input id="project-create-name" class="input mono-input" placeholder="Project name">
+                </label>
+                <label>
+                  <span>Stage</span>
+                  <select id="project-create-stage" class="input mono-input">
+                    <option value="backlog">Backlog</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="review">Review</option>
+                    <option value="done">Done</option>
+                  </select>
+                </label>
+              </div>
+              <label>
+                <span>Description</span>
+                <input id="project-create-description" class="input mono-input" placeholder="Short description">
+              </label>
+              <div class="project-create-grid">
+                <label>
+                  <span>Tags</span>
+                  <input id="project-create-tags" class="input mono-input" placeholder="mq, infra">
+                </label>
+                <label>
+                  <span>Stories</span>
+                  <input id="project-create-story-count" class="input mono-input" type="number" min="0" value="0">
+                </label>
+              </div>
+              <div class="project-create-grid">
+                <label>
+                  <span>Progress %</span>
+                  <input id="project-create-progress-pct" class="input mono-input" type="number" min="0" max="100" value="0">
+                </label>
+                <label>
+                  <span>Target Date</span>
+                  <input id="project-create-target-date" class="input mono-input" placeholder="Feb 20">
+                </label>
+              </div>
+              <div class="project-create-grid">
+                <label>
+                  <span>Boot Mode</span>
+                  <select id="project-create-boot-mode" class="input mono-input">
+                    <option value="resume_existing">resume_existing</option>
+                    <option value="reload_from_prd">reload_from_prd</option>
+                    <option value="reload_from_roadmap">reload_from_roadmap</option>
+                  </select>
+                </label>
+                <label>
+                  <span>PRD File (optional)</span>
+                  <input id="project-create-prd-file" class="input mono-input" placeholder="C:\\repo\\project\\prd.json">
+                </label>
+              </div>
+              <div class="project-create-grid">
+                <label>
+                  <span>Workspace Path (optional)</span>
+                  <input id="project-create-workspace-path" class="input mono-input" placeholder="C:\\repo\\Time-series-infra">
+                </label>
+                <label>
+                  <span>Roadmap File (optional)</span>
+                  <input id="project-create-roadmap-file" class="input mono-input" placeholder="C:\\repo\\project\\project.roadmap.json">
+                </label>
+              </div>
+              <div class="project-create-actions">
+                <button class="btn btn-muted" data-project-action="cancel_edit">Cancel Edit</button>
+                <button id="project-create-submit" class="btn btn-accent" data-project-action="create">Create Project</button>
+              </div>
+            </div>
+
+            <div id="boot-step-tabs" class="step-tabs"></div>
+            <div id="boot-step-body" class="step-body grow">loading...</div>
+
+            <div class="wizard-footer">
+              <button id="boot-prev" class="btn btn-muted">Prev</button>
+              <span id="boot-step-indicator" class="mono">1 / 4</span>
+              <button id="boot-next" class="btn btn-accent">Next Step</button>
+            </div>
+            <div id="boot-control-result" class="mono subtle project-control-result">ready</div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

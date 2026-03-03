@@ -1,0 +1,127 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aha Loop MQ · Stories</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body data-page="stories">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>AHA LOOP MQ</h1>
+        <p>Control plane</p>
+      </div>
+      <nav class="nav">
+        <button class="nav-item" data-page="projects"><i data-lucide="folder-kanban"></i><span>Projects</span></button>
+        <button class="nav-item" data-page="overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></button>
+        <button class="nav-item active" data-page="stories"><i data-lucide="book-open"></i><span>Stories</span></button>
+        <button class="nav-item" data-page="incidents"><i data-lucide="alert-triangle"></i><span>Incidents</span></button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="header">
+        <div>
+          <h2 id="header-title">STORIES DASHBOARD</h2>
+          <p id="header-subtitle">status distribution · phase progress · dependency bottlenecks</p>
+        </div>
+        <div id="header-actions" class="header-actions">
+          <div id="header-boot-cta" class="boot-cta hidden">
+            <span>GUIDE</span>
+            <small>FLOW</small>
+          </div>
+          <div id="header-chips" class="chips hidden">
+            <span id="chip-env" class="chip">env: single-instance</span>
+            <span id="chip-timezone" class="chip">timezone: UTC+8</span>
+            <span id="chip-refresh" class="chip chip-accent">refresh 5s</span>
+          </div>
+        </div>
+      </header>
+
+      <section id="page-stories" class="page active">
+        <div class="grid two-col-main grow">
+          <div class="col">
+            <article class="panel">
+              <div class="panel-head"><h3>Story Counts</h3></div>
+              <div id="stories-summary" class="inline-metrics">loading...</div>
+            </article>
+
+            <article class="panel grow">
+              <div class="panel-head">
+                <h3>Active Stories</h3>
+                <span class="panel-meta">click story to open detail page · run-level tracking</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr id="stories-head">
+                      <th class="sortable" data-sort-key="storyId"><span class="sort-label">storyId <span class="sort-indicator">-</span></span></th>
+                      <th class="sortable" data-sort-key="prdId"><span class="sort-label">prdId <span class="sort-indicator">-</span></span></th>
+                      <th class="sortable" data-sort-key="phase"><span class="sort-label">phase <span class="sort-indicator">-</span></span></th>
+                      <th class="sortable" data-sort-key="status"><span class="sort-label">status <span class="sort-indicator">-</span></span></th>
+                      <th class="sortable" data-sort-key="attempt"><span class="sort-label">attempt <span class="sort-indicator">-</span></span></th>
+                      <th class="sortable" data-sort-key="currentRunId"><span class="sort-label">runId <span class="sort-indicator">-</span></span></th>
+                      <th class="sortable" data-sort-key="traceId"><span class="sort-label">traceId <span class="sort-indicator">-</span></span></th>
+                      <th class="sortable" data-sort-key="updatedAt"><span class="sort-label">updatedAt <span class="sort-indicator">-</span></span></th>
+                      <th>actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="stories-body"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+
+          <div class="col side">
+            <article class="panel">
+              <div class="panel-head"><h3>Phase Distribution</h3></div>
+              <div id="stories-phase" class="phase-bars">loading...</div>
+            </article>
+            <article class="panel">
+              <div class="panel-head"><h3>Run Timeline (UTC+8)</h3></div>
+              <ul id="stories-runs" class="list"></ul>
+            </article>
+            <article class="panel">
+              <div class="panel-head">
+                <h3>Run Failure Detail</h3>
+                <span class="panel-meta">click timeline item / View Log</span>
+              </div>
+              <div id="stories-run-detail" class="json-view">click a run item to inspect</div>
+            </article>
+            <article class="panel">
+              <div class="panel-head">
+                <h3>Story Detail</h3>
+                <span class="panel-meta">quick glance (first row auto-selected)</span>
+              </div>
+              <div id="stories-detail" class="json-view">loading...</div>
+            </article>
+            <article class="panel">
+              <div class="panel-head">
+                <h3>Notifications</h3>
+                <span class="panel-meta">system reminders for failed runs</span>
+              </div>
+              <div class="control-grid">
+                <div id="notify-status" class="mono notify-status">status: loading...</div>
+                <div class="control-actions">
+                  <button class="btn btn-soft" id="notify-enable" data-notify-action="enable">Enable</button>
+                  <button class="btn btn-muted" id="notify-test" data-notify-action="test">Test</button>
+                  <button class="btn btn-bad" id="notify-disable" data-notify-action="disable">Mute</button>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

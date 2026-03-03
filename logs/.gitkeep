@@ -1,8 +1,0 @@
-# AI Thoughts Log Directory
-
-This directory contains AI observability logs.
-
-- `ai-thoughts.md` - Main thought log (append-only)
-- `exploration-*.md` - Parallel exploration logs
-
-These logs are for human observation of AI decision-making process.

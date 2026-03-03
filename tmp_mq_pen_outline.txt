@@ -1,0 +1,631 @@
+
+### MQ Overview [bi8Au]
+- frame MQ Overview [bi8Au] w=1440 h=1220 fill="#EEF3FB"
+- frame Sidebar [UM1Jo] layout=vertical gap=18 padding=[20,18] w=248 h="fill_container" fill="#071428"
+- frame Brand [pPc25] layout=vertical gap=4 padding=[0,0,12,0] w="fill_container"
+- text text="AHA LOOP MQ" [AXbIF] fill="#FFFFFF" font=Sora fs=26 fw="800"
+- text text="Control plane" [bcLfx] fill="#8FA4CC" font=Space Mono fs=11 fw="normal"
+- frame Nav [FVUHc] layout=vertical gap=8 w="fill_container"
+- frame navProjects [yc9ar] gap=10 padding=[10,12] w="fill_container" r=10
+- icon_font ov_proj_icon [nZ0Iu] w=16 h=16 fill="#99A3B8"
+- text text="Projects" [QeGzN] fill="#99A3B8" font=Sora fs=14 fw="normal"
+- frame nav1 [J00PD] gap=10 padding=[10,12] w="fill_container" fill="#F4F8FF" r=10
+- icon_font nav1icon [1NnkS] w=16 h=16 fill="#0E121B"
+- text text="Overview" [A1WEJ] fill="#0E121B" font=Sora fs=14 fw="600"
+- frame nav2 [9MLNV] gap=10 padding=[10,12] w="fill_container" r=10
+- icon_font nav2icon [dz1bg] w=16 h=16 fill="#99A3B8"
+- text text="Stories" [nzek4] fill="#99A3B8" font=Sora fs=14 fw="normal"
+- frame nav3 [Oxe75] gap=10 padding=[10,12] w="fill_container" r=10
+- icon_font nav3icon [W0tAP] w=16 h=16 fill="#99A3B8"
+- text text="Incidents" [D3oqI] fill="#99A3B8" font=Sora fs=14 fw="normal"
+- frame Main [Wxd3h] layout=vertical w="fill_container" h="fill_container" fill="#EEF3FB"
+- frame Header [56JDH] gap=12 padding=[24,28] w="fill_container" fill="#081A33"
+- frame headLeft [ltDc0] layout=vertical gap=4
+- text text="MQ COMMAND CENTER" [AvtXc] fill="#FFFFFF" font=Sora fs=30 fw="800"
+- text text="real-time queue telemetry · scheduler control · run intelligence" [lGpuQ] fill="#9CB1D7" font=Space Mono fs=11 fw="normal"
+- frame headRight [7RIoA] gap=8
+- frame  [8P5Zr] padding=[6,10] fill="#173A6C" r=999
+- text text="env: single-instance" [k39ky] fill="#D7E7FF" font=Space Mono fs=10 fw="700"
+- frame  [mm1Fz] padding=[6,10] fill="#173A6C" r=999
+- text text="timezone: UTC+8" [JcN2f] fill="#D7E7FF" font=Space Mono fs=10 fw="700"
+- frame  [gMn4p] padding=[6,10] fill="#FF7A33" r=999
+- text text="refresh 5s" [pNbG8] fill="#FFFFFF" font=Space Mono fs=10 fw="700"
+- frame Body [jkr3c] layout=vertical gap=14 padding=[16,22] w="fill_container" h="fill_container" fill="#EDF2FB"
+- frame statusRibbon [2bT5r] gap=10 padding=[12,16] w="fill_container" fill="#0E2549" r=12
+- text text="System Healthy" [9gJo7] fill="#FFFFFF" font=Sora fs=14 fw="700"
+- ellipse healthDot [yMOIR] w=10 h=10 fill="#22C55E"
+- text text="broker connected · scheduler alive · worker alive · semantics=at-least-once" [5G5m5] fill="#BFD3F6" font=Space Mono fs=9 fw="normal"
+- frame kpiGrid [Fzo15] gap=12 w="fill_container"
+- frame  [ZYfEj] layout=vertical gap=8 padding=16 w="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- text text="WORK" [nbtsK] fill="#64748B" font=Space Mono fs=10 fw="normal"
+- text text="124" [Nnbbt] fill="#0F172A" font=Sora fs=32 fw="800"
+- text text="+12 in 5m · consumer 1" [zKSxc] fill="#2563EB" font=Space Mono fs=10 fw="normal"
+- rectangle workBar [BgWyV] w="fill_container" h=3 fill="#2563EB" r=2
+- text text="▁▂▃▄▅▆▇" [BDcUM] fill="#93C5FD" font=Space Mono fs=11 fw="normal"
+- frame  [t4BIk] layout=vertical gap=8 padding=16 w="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- text text="RETRY" [WVA3D] fill="#64748B" font=Space Mono fs=10 fw="normal"
+- text text="18" [Ljig3] fill="#0F172A" font=Sora fs=32 fw="800"
+- text text="14% retry rate" [Q6eI5] fill="#B45309" font=Space Mono fs=10 fw="normal"
+- rectangle retryBar [roRH6] w="fill_container" h=3 fill="#D97706" r=2
+- text text="▁▁▂▃▃▄▅" [L4yaz] fill="#FACC15" font=Space Mono fs=11 fw="normal"
+- frame  [sS3fl] layout=vertical gap=8 padding=16 w="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- text text="DEAD" [7udp2] fill="#64748B" font=Space Mono fs=10 fw="normal"
+- text text="3" [KORzX] fill="#0F172A" font=Sora fs=32 fw="800"
+- text text="persisted > 2m" [UrzMx] fill="#B91C1C" font=Space Mono fs=10 fw="normal"
+- rectangle deadBar [rZUfz] w="fill_container" h=3 fill="#DC2626" r=2
+- text text="▁▁▁▂▂▂▃" [9nLeN] fill="#FCA5A5" font=Space Mono fs=11 fw="normal"
+- frame  [2AbHO] layout=vertical gap=8 padding=16 w="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- text text="LATENCY p95" [84RTq] fill="#64748B" font=Space Mono fs=10 fw="normal"
+- text text="2.8s" [YJQk1] fill="#0F172A" font=Sora fs=32 fw="800"
+- text text="5m window" [As316] fill="#0F766E" font=Space Mono fs=10 fw="normal"
+- rectangle latBar [8fli3] w="fill_container" h=3 fill="#0F766E" r=2
+- text text="▁▂▂▃▄▅▅" [j6PLU] fill="#5EEAD4" font=Space Mono fs=11 fw="normal"
+- frame mainSplit [2upf3] gap=14 w="fill_container" h="fill_container"
+- frame leftColumn [WZP4k] layout=vertical gap=14 w="fill_container" h="fill_container"
+- frame queueTimeline [TVJGT] layout=vertical gap=12 padding=18 w="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- text text="Queue / Latency Timeline" [ulWl2] fill="#10141D" font=Sora fs=17 fw="700"
+- text text="work, retry, dead, p95 over last 15m" [OZcP8] fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame  [6H2md] layout=none w="fill_container" h=180 fill="#FFFFFF" r=10
+- frame chartLegend [aTaJ1] gap=16 w="fill_container"
+- frame  [2MBKX] gap=8
+- frame storyTableModern [l2RbD] layout=vertical gap=10 padding=18 w="fill_container" h="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- text text="Story Lifecycle Stream" [oENL1] fill="#10141D" font=Sora fs=17 fw="700"
+- frame  [9rXBS] padding=[8,10] w="fill_container" fill="#F4F7FF" r=8
+- frame row1 [0sUlb] gap=8 padding=[6,8] w="fill_container" fill="#F0FDF4" r=6
+- frame row2 [UIKbf] gap=8 padding=[6,8] w="fill_container" r=6
+- frame row3 [mEVyY] gap=8 padding=[6,8] w="fill_container" fill="#FEF2F2" r=6
+- frame rightColumn [BZ2A0] layout=vertical gap=12 w=350
+- frame  [RN4Oy] layout=vertical gap=10 padding=16 w="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame alertHead [1NHjZ] gap=8 w="fill_container"
+- rectangle alertDiv [12cwS] w="fill_container" h=1 fill="#E2E8F0"
+- frame a1Row [pcTiy] gap=8 w="fill_container"
+- frame a2Row [UB9ok] gap=8 w="fill_container"
+- frame a3Row [haDdH] gap=8 w="fill_container"
+- frame  [6tTLK] layout=vertical gap=10 padding=16 w="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame ctrlHead [SAeG1] gap=8 w="fill_container"
+- rectangle ctrlDiv [Um5dj] w="fill_container" h=1 fill="#E2E8F0"
+- frame  [j2NCt] gap=8
+- frame  [BCNxl] layout=vertical gap=10 padding=16 w="fill_container" fill="#0F2549" r=14
+- frame renderHead [lGGcT] gap=8 w="fill_container"
+- text text="markdown: parsed + highlighted" [qLFzM] fill="#BFD3F6" font=Space Mono fs=10 fw="normal"
+- text text="json: schema-view + diff-view" [wlAoW] fill="#BFD3F6" font=Space Mono fs=10 fw="normal"
+- text text="last sync: 2026/02/18 18:20 (UTC+8)" [WG9ge] fill="#BFD3F6" font=Space Mono fs=10 fw="normal"
+
+### MQ Stories [eD6qx]
+- frame MQ Stories [eD6qx] w=1440 h=1220 fill="#EEF3FB"
+- frame storiesSidebar [DcrW1] layout=vertical gap=18 padding=[20,18] w=248 h="fill_container" fill="#071428"
+- frame Brand [7tjVH] layout=vertical gap=4 padding=[0,0,12,0] w="fill_container"
+- text text="AHA LOOP MQ" [WbtRD] fill="#FFFFFF" font=Sora fs=26 fw="800"
+- text text="Control plane" [o2IvJ] fill="#8FA4CC" font=Space Mono fs=11 fw="normal"
+- frame Nav [KcASD] layout=vertical gap=8 w="fill_container"
+- frame navProjects [9kWzr] gap=10 padding=[10,12] w="fill_container" r=10
+- icon_font st_proj_icon [RWtMQ] w=16 h=16 fill="#99A3B8"
+- text text="Projects" [d7gG4] fill="#99A3B8" font=Sora fs=14 fw="normal"
+- frame nav1 [3J2x4] gap=10 padding=[10,12] w="fill_container" fill="#071428" r=10
+- icon_font sNav1Icon [DxCYO] w=16 h=16 fill="#99A3B8"
+- text text="Overview" [nlkKt] fill="#99A3B8" font=Sora fs=14 fw="normal"
+- frame nav2 [A5gA2] gap=10 padding=[10,12] w="fill_container" fill="#F4F8FF" r=10
+- icon_font sNav2Icon [HxH3p] w=16 h=16 fill="#0E121B"
+- text text="Stories" [KYFHK] fill="#0E121B" font=Sora fs=14 fw="600"
+- frame nav3 [Fdk4C] gap=10 padding=[10,12] w="fill_container" r=10
+- icon_font sNav3Icon [wynN5] w=16 h=16 fill="#99A3B8"
+- text text="Incidents" [Ekz8l] fill="#99A3B8" font=Sora fs=14 fw="normal"
+- frame Stories Main [lFEfW] layout=vertical w="fill_container" h="fill_container" fill="#EEF3FB"
+- frame Header [3rYJs] layout=vertical gap=6 padding=[28,32] w="fill_container" fill="#0A1C3A"
+- text text="STORIES DASHBOARD" [77D2Y] fill="#FFFFFF" font=Sora fs=36 fw="800"
+- text text="status distribution · phase progress · dependency bottlenecks" [R3n7M] fill="#A9B8D2" font=Space Mono fs=11 fw="normal"
+- frame Body [Umvmv] gap=16 padding=[18,24] w="fill_container" h="fill_container" fill="#EEF3FB"
+- frame Left [MJaYC] layout=vertical gap=16 w="fill_container" h="fill_container"
+- frame Story Summary [RAeX7] layout=vertical gap=10 padding=16 w="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- text text="Story Counts" [ur77V] fill="#10141D" font=Sora fs=18 fw="700"
+- frame countsRow [qI4l9] gap=10 w="fill_container"
+- frame cPending [1B9UP] layout=vertical gap=4 padding=[10,14] w="fill_container" fill="#FFF7E8" r=10
+- frame cRunning [CkYch] layout=vertical gap=4 padding=[10,14] w="fill_container" fill="#EAF3FF" r=10
+- frame cDone [8fr92] layout=vertical gap=4 padding=[10,14] w="fill_container" fill="#E8FFF1" r=10
+- frame cDead [AEqoj] layout=vertical gap=4 padding=[10,14] w="fill_container" fill="#FFEDED" r=10
+- frame Stories Table [fxXqR] layout=vertical gap=12 padding=18 w="fill_container" h="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=16
+- text text="Active Stories" [gpXxj] fill="#10141D" font=Sora fs=18 fw="700"
+- text text="run-level tracking · per-story action" [BhPTD] fill="#66758F" font=Space Mono fs=10 fw="normal"
+- frame storiesHeader [ztn78] padding=[8,10] w="fill_container" fill="#F5F8FF" r=10
+- frame col1h [REA5E] w=165
+- frame col2h [SNSTK] w=80
+- frame col3h [ExyDh] w=75
+- frame col4h [EruYl] w=55
+- frame col5h [Yrg79] w="fill_container"
+- frame col6h [XSaYK] w=120
+- frame storyRow1 [inM1y] padding=10 w="fill_container" fill="#FBFDFF" r=10
+- frame c1r1 [uM4LU] w=165
+- frame c2r1 [6jPqx] w=80
+- frame c3r1 [nyBkK] w=75
+- frame c4r1 [3kSoI] w=55
+- frame c5r1 [2IRhN] w="fill_container"
+- frame c6r1 [Zlw9U] gap=8 w=120
+- frame storyRow2 [2T71U] padding=10 w="fill_container" fill="#FFFFFF" r=10
+- frame c1r2 [NFtEL] w=165
+- frame c2r2 [M0MiG] w=80
+- frame c3r2 [E8d9q] w=75
+- frame c4r2 [nIAEg] w=55
+- frame c5r2 [cHqev] w="fill_container"
+- frame c6r2 [ZAkfs] gap=8 w=120
+- frame storyRow3 [Alxdr] padding=10 w="fill_container" fill="#FFFFFF" r=10
+- frame c1r3 [C3hX8] w=165
+- frame c2r3 [uOy4j] w=80
+- frame c3r3 [tCrFa] w=75
+- frame c4r3 [bwi2l] w=55
+- frame c5r3 [jd8yD] w="fill_container"
+- frame c6r3 [iZT34] gap=8 w=120
+- text text="Tip: click a row to open phase-level run transcript and Codex exchange timeline." [dJujF] fill="#5A6883" font=Space Mono fs=10 fw="normal"
+- frame Right [RHNaM] layout=vertical gap=16 w=360 h="fill_container"
+- frame Phase Distribution [wBUBq] layout=vertical gap=10 padding=16 w="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame phaseHead [07FpS] gap=8 w="fill_container"
+- icon_font phaseIcon [5Xp6V] w=16 h=16 fill="#2563EB"
+- text text="Phase Distribution" [QVInU] fill="#10141D" font=Sora fs=16 fw="700"
+- text text="planning 8 | coding 11 | review 6 | merge 2" [Hetnq] fill="#233047" font=Space Mono fs=11 fw="normal"
+- frame Run Timeline [uSlRJ] layout=vertical gap=8 padding=16 w="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame tlHead [eOln7] gap=8 w="fill_container"
+- icon_font tlIcon [SlPKM] w=16 h=16 fill="#2563EB"
+- text text="Run Timeline (UTC+8)" [wTYrr] fill="#10141D" font=Sora fs=16 fw="700"
+- rectangle tlDiv [4nl1V] w="fill_container" h=1 fill="#E2E8F0"
+- frame tl1Row [fc9j5] gap=8 w="fill_container"
+- ellipse tl1Dot [NAM5t] w=6 h=6 fill="#2563EB"
+- text text="18:02 dispatch  PRD-001-S01  tr-82ac" [zMCt7] fill="#2453A6" font=Space Mono fs=10 fw="normal"
+- frame tl2Row [nm5Iw] gap=8 w="fill_container"
+- ellipse tl2Dot [2Ah88] w=6 h=6 fill="#2563EB"
+- text text="18:03 start     PRD-001-S01  run-51" [dlx5M] fill="#2453A6" font=Space Mono fs=10 fw="normal"
+- frame tl3Row [RD5hn] gap=8 w="fill_container"
+- ellipse tl3Dot [obWcD] w=6 h=6 fill="#DC2626"
+- text text="18:08 fail      PRD-001-S01  attempt=1" [SXDc1] fill="#B13535" font=Space Mono fs=10 fw="normal"
+- frame tl4Row [pWqci] gap=8 w="fill_container"
+- ellipse tl4Dot [M7U59] w=6 h=6 fill="#D97706"
+- text text="18:09 retry     PRD-001-S01  attempt=2" [2ogtq] fill="#9A6D00" font=Space Mono fs=10 fw="normal"
+- frame tl5Row [czDW4] gap=8 w="fill_container"
+- ellipse tl5Dot [RffJ5] w=6 h=6 fill="#16A34A"
+- text text="18:12 success   PRD-001-S01  merge-ready" [3eAb9] fill="#0E8E4F" font=Space Mono fs=10 fw="normal"
+- frame Dependency Risk [XPn0s] layout=vertical gap=10 padding=16 w="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame depHead [KbIpm] gap=8 w="fill_container"
+- icon_font depIcon [NYIZY] w=16 h=16 fill="#DC2626"
+- text text="Dependency Risk" [ZPk0A] fill="#10141D" font=Sora fs=16 fw="700"
+- text text="blocked stories: 3\nlongest wait: 42m\ncritical chain: prd-auth" [yblDe] fill="#233047" font=Space Mono fs=11 fw="normal"
+
+### MQ Incidents [qDOxD]
+- frame MQ Incidents [qDOxD] w=1440 h=1220 fill="#EEF3FB"
+- frame alertsSidebar [G0YMa] layout=vertical gap=18 padding=[20,18] w=248 h="fill_container" fill="#071428"
+- frame Brand [CWGnl] layout=vertical gap=4 padding=[0,0,12,0] w="fill_container"
+- text text="AHA LOOP MQ" [4BnsJ] fill="#FFFFFF" font=Sora fs=26 fw="800"
+- text text="Control plane" [Yzjl0] fill="#8FA4CC" font=Space Mono fs=11 fw="normal"
+- frame Nav [2gEqM] layout=vertical gap=8 w="fill_container"
+- frame navProjects [zsGoc] gap=10 padding=[10,12] w="fill_container" r=10
+- icon_font in_proj_icon [qLMJ5] w=16 h=16 fill="#99A3B8"
+- text text="Projects" [VpghF] fill="#99A3B8" font=Sora fs=14 fw="normal"
+- frame nav1 [2D7GV] gap=10 padding=[10,12] w="fill_container" fill="#071428" r=10
+- icon_font iNav1Icon [nqgfX] w=16 h=16 fill="#99A3B8"
+- text text="Overview" [FUkKG] fill="#99A3B8" font=Sora fs=14 fw="normal"
+- frame nav2 [EoVdt] gap=10 padding=[10,12] w="fill_container" r=10
+- icon_font iNav2Icon [0TOe7] w=16 h=16 fill="#99A3B8"
+- text text="Stories" [I8pMn] fill="#99A3B8" font=Sora fs=14 fw="normal"
+- frame nav3 [DKgRD] gap=10 padding=[10,12] w="fill_container" fill="#F4F8FF" r=10
+- icon_font iNav3Icon [ypOlO] w=16 h=16 fill="#0E121B"
+- text text="Incidents" [nKbfp] fill="#0E121B" font=Sora fs=14 fw="600"
+- frame Alerts Main [IqXz5] layout=vertical w="fill_container" h="fill_container" fill="#EEF3FB"
+- frame Header [vLCMt] layout=vertical gap=6 padding=[28,32] w="fill_container" fill="#0A1C3A"
+- text text="INCIDENTS DASHBOARD" [iCKcy] fill="#FFFFFF" font=Sora fs=36 fw="800"
+- text text="alerts + dead letters · triage · recovery actions" [PT1ls] fill="#A9B8D2" font=Space Mono fs=11 fw="normal"
+- frame Body [ph2vf] gap=16 padding=[18,24] w="fill_container" h="fill_container" fill="#EEF3FB"
+- frame Left [RiFYZ] layout=vertical gap=16 w="fill_container" h="fill_container"
+- frame Live Alerts [TrVLd] layout=vertical gap=10 padding=16 w="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame alertsHead [IOmHb] gap=8 w="fill_container"
+- icon_font alertsIcon [Y6rnL] w=16 h=16 fill="#DC2626"
+- text text="Live Alerts" [XtX4X] fill="#10141D" font=Sora fs=18 fw="700"
+- frame al1Row [H3zmY] gap=8 padding=[6,8] w="fill_container" fill="#FEF2F2" r=6
+- ellipse al1Dot [ubhal] w=8 h=8 fill="#DC2626"
+- text text="10:12  dead_queue_nonzero  severity=high" [9bxVV] fill="#B13535" font=Space Mono fs=10 fw="normal"
+- frame al1Badge [Pa98a] padding=[2,6] fill="#DC2626" r=999
+- frame al2Row [pzgoI] gap=8 padding=[6,8] w="fill_container" fill="#FFF7E8" r=6
+- ellipse al2Dot [j0Puf] w=8 h=8 fill="#D97706"
+- text text="10:14  high_retry_rate  rate=0.24" [8ukBJ] fill="#8A6500" font=Space Mono fs=10 fw="normal"
+- frame al2Badge [JtfXV] padding=[2,6] fill="#D97706" r=999
+- frame al3Row [iLPaz] gap=8 padding=[6,8] w="fill_container" fill="#EAF3FF" r=6
+- ellipse al3Dot [IdNPe] w=8 h=8 fill="#2563EB"
+- text text="10:15  queue_stuck_growth  window=3m" [QmPGc] fill="#1149B6" font=Space Mono fs=10 fw="normal"
+- frame al3Badge [dtRax] padding=[2,6] fill="#2563EB" r=999
+- frame Rule Config [r7viO] layout=vertical gap=12 padding=16 w="fill_container" h="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=16
+- frame ruleHeader [gkXiD] w="fill_container"
+- frame  [VxITT] gap=8
+- frame  [7fzO8] padding=[4,10] fill="#EEF2FF" r=999
+- text text="threshold · duration · actions · webhook" [VFzFq] fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame ruleCard1 [mIeTE] layout=vertical gap=8 padding=12 w="fill_container" fill="#F8FAFF" stroke={"align":"inside","thickness":1,"fill":"#DBEAFE"} r=12
+- frame  [zsbJE] w="fill_container"
+- text text="dead > 0 sustained window triggers incident alarm" [1UfZj] fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame  [gm7Un] gap=8 w="fill_container"
+- frame ruleCard2 [wQ3YD] layout=vertical gap=8 padding=12 w="fill_container" fill="#F8FAFF" stroke={"align":"inside","thickness":1,"fill":"#DBEAFE"} r=12
+- frame  [e6AkX] w="fill_container"
+- text text="retry rate above threshold in rolling window" [mk139] fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame  [Sqfm4] gap=8 w="fill_container"
+- frame ruleCard3 [cQfXF] layout=vertical gap=8 padding=12 w="fill_container" fill="#F8FAFF" stroke={"align":"inside","thickness":1,"fill":"#DBEAFE"} r=12
+- frame  [eCNiE] w="fill_container"
+- text text="work queue rising while completed count flat" [u0qr9] fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame  [kgmlA] gap=8 w="fill_container"
+- frame webhookRow [taXwy] layout=vertical gap=4 w="fill_container"
+- text text="Webhook Target" [uV2Nn] fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame  [SUMhF] padding=[8,10] w="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#CBD5E1"} r=10
+- frame ruleActions [3cHfO] w="fill_container"
+- frame  [vRNRZ] gap=8
+- frame  [zC6eu] padding=[8,12] fill="#FF7A33" r=10
+- frame Dead Queue (Incidents) [0JIM6] layout=vertical gap=8 padding=16 w="fill_container" h="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame dqHead [zKGts] gap=8 w="fill_container"
+- icon_font dqIcon [zGKor] w=16 h=16 fill="#DC2626"
+- text text="Dead Queue Messages" [Bd7sK] fill="#10141D" font=Sora fs=18 fw="700"
+- text text="storyId          phase       attempt   traceId    lastError" [YnVBF] fill="#6A7489" font=Space Mono fs=11 fw="normal"
+- text text="story-plan-07    planning    5         tr-7f22    merge conflict" [MZT2c] fill="#B13535" font=Space Mono fs=11 fw="normal"
+- text text="story-impl-03    coding      4         tr-40bd    agent timeout" [x3y03] fill="#B13535" font=Space Mono fs=11 fw="normal"
+- text text="story-ci-11      review      3         tr-9a10    invalid payload" [xi8Po] fill="#B13535" font=Space Mono fs=11 fw="normal"
+- frame Right [7icfZ] layout=vertical gap=16 w=400 h="fill_container"
+- frame Run Operations [3iOvj] layout=vertical gap=10 padding=16 w="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame opsHead [BTVlN] gap=8 w="fill_container"
+- icon_font opsIcon [dWKmz] w=16 h=16 fill="#2563EB"
+- text text="Run Operations" [fwUsh] fill="#10141D" font=Sora fs=16 fw="700"
+- text text="global control for single-instance runtime" [fzkie] fill="#233047" font=Space Mono fs=10 fw="normal"
+- frame Run Buttons [DxAed] gap=8 w="fill_container"
+- frame btnPause [y5rQl] layout=vertical padding=[8,12] fill="#0F274D" r=999
+- frame btnResume [Dx9Xi] layout=vertical padding=[8,12] fill="#0E8E4F" r=999
+- frame btnRestart [P4v4d] layout=vertical padding=[8,12] fill="#9A6D00" r=999
+- frame btnCancel [3Slil] layout=vertical padding=[8,12] fill="#B13535" r=999
+- frame Runtime Command [NXYby] layout=vertical gap=10 padding=16 w="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame cmdHead [yF5wb] gap=8 w="fill_container"
+- icon_font cmdIcon [QVMko] w=16 h=16 fill="#16A34A"
+- text text="Runtime Command" [9uvUs] fill="#10141D" font=Sora fs=16 fw="700"
+- text text="pause/resume/restart/cancel from one panel" [pJdq7] fill="#233047" font=Space Mono fs=11 fw="normal"
+- frame Selected Dead Message [o4G6w] layout=vertical gap=8 padding=16 w="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame selHead [VPIMq] gap=8 w="fill_container"
+- icon_font selIcon [Xb9vH] w=16 h=16 fill="#D97706"
+- text text="Selected Message" [FFacm] fill="#10141D" font=Sora fs=16 fw="700"
+- text text="storyId: story-plan-07" [R5RR5] fill="#233047" font=Space Mono fs=11 fw="normal"
+- text text="phase: planning   attempt: 5   traceId: tr-7f22" [5am91] fill="#233047" font=Space Mono fs=11 fw="normal"
+- text text="worktreeId: wt-prd7" [l7H7G] fill="#233047" font=Space Mono fs=11 fw="normal"
+- text text="lastError: merge conflict in src/scheduler/scheduler.js" [gnVTZ] fill="#B13535" font=Space Mono fs=11 fw="normal"
+- frame Failure Taxonomy [0E3G4] layout=vertical gap=10 padding=16 w="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame taxHead [AiU7S] gap=8 w="fill_container"
+- icon_font taxIcon [OTupJ] w=16 h=16 fill="#DC2626"
+- text text="Failure Taxonomy" [VKSHU] fill="#10141D" font=Sora fs=16 fw="700"
+- frame tax1Row [E6LiX] gap=8 w="fill_container"
+- text text="merge_conflict" [oUJXK] w=120 fill="#B13535" font=Space Mono fs=10 fw="normal"
+- rectangle tax1Bar [34OtH] w=80 h=12 fill="#DC2626" r=3
+- text text="4" [GlWl2] fill="#B13535" font=Space Mono fs=10 fw="700"
+- frame tax2Row [6lK2N] gap=8 w="fill_container"
+- text text="agent_timeout" [A3lVt] w=120 fill="#9A6D00" font=Space Mono fs=10 fw="normal"
+- rectangle tax2Bar [k17Oi] w=60 h=12 fill="#D97706" r=3
+- text text="3" [Spdar] fill="#9A6D00" font=Space Mono fs=10 fw="700"
+- frame tax3Row [XM12B] gap=8 w="fill_container"
+- text text="invalid_payload" [6lgnC] w=120 fill="#2453A6" font=Space Mono fs=10 fw="normal"
+- rectangle tax3Bar [uFhEG] w=40 h=12 fill="#2563EB" r=3
+- text text="2" [1qBOn] fill="#2453A6" font=Space Mono fs=10 fw="700"
+
+### MQ Projects [W3bYm]
+- frame MQ Projects [W3bYm] w=1440 h=1220 fill="#EEF3FB"
+- frame Sidebar [YY3Us] layout=vertical gap=18 padding=[20,18] w=248 h="fill_container" fill="#071428"
+- frame Brand [c0Ifx] layout=vertical gap=4 padding=[0,0,12,0] w="fill_container"
+- text text="AHA LOOP MQ" [6GHWT] fill="#FFFFFF" font=Sora fs=26 fw="800"
+- text text="Control plane" [yvW09] fill="#8FA4CC" font=Space Mono fs=11 fw="normal"
+- frame Nav [HlzPz] layout=vertical gap=8 w="fill_container"
+- frame navProjects [m8IGz] gap=10 padding=[10,12] w="fill_container" fill="#F4F8FF" r=10
+- icon_font navProjectsIcon [WW4Nb] w=16 h=16 fill="#0E121B"
+- text text="Projects" [8mbXm] fill="#0E121B" font=Sora fs=14 fw="600"
+- frame navOverview [DY0dV] gap=10 padding=[10,12] w="fill_container" r=10
+- icon_font navOverviewIcon [QeSgY] w=16 h=16 fill="#99A3B8"
+- text text="Overview" [WMTrP] fill="#99A3B8" font=Sora fs=14 fw="normal"
+- frame navStories [Wfb6W] gap=10 padding=[10,12] w="fill_container" r=10
+- icon_font navStoriesIcon [ASLJ2] w=16 h=16 fill="#99A3B8"
+- text text="Stories" [xbBYa] fill="#99A3B8" font=Sora fs=14 fw="normal"
+- frame navIncidents [eOTPD] gap=10 padding=[10,12] w="fill_container" r=10
+- icon_font navIncidentsIcon [PpNtd] w=16 h=16 fill="#99A3B8"
+- text text="Incidents" [izcFg] fill="#99A3B8" font=Sora fs=14 fw="normal"
+- frame Main [ZzJsJ] layout=vertical w="fill_container" h="fill_container" fill="#EEF3FB"
+- frame Header [O0IuA] padding=[24,28] w="fill_container" fill="#081A33"
+- frame headLeft [Q2w5i] layout=vertical gap=4
+- text text="PROJECTS" [qc37g] fill="#FFFFFF" font=Sora fs=30 fw="800"
+- text text="kanban board · project lifecycle · click to enter details" [MTbA2] fill="#9CB1D7" font=Space Mono fs=11 fw="normal"
+- frame headRight [fLZBv] gap=8
+- frame tagTotal [f7UOU] padding=[6,10] fill="#173A6C" r=999
+- text text="total: 9 projects" [j4NUw] fill="#D7E7FF" font=Space Mono fs=10 fw="700"
+- frame btnNew [8Z4SW] gap=6 padding=[6,14] fill="#2563EB" r=999
+- icon_font btnNewIcon [Fq1XH] w=12 h=12 fill="#FFFFFF"
+- text text="New Project" [DrjvL] fill="#FFFFFF" font=Sora fs=11 fw="700"
+- frame Body [pkj6w] gap=16 padding=[18,22] w="fill_container" h="fill_container" fill="#EDF2FB"
+- frame Backlog Column [LgK4N] layout=vertical gap=12 padding=[16,14] w="fill_container" h="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame colHeader [jL3RO] w="fill_container"
+- frame col1Left [XcwYX] gap=8
+- ellipse col1Dot [iIfQP] w=10 h=10 fill="#94A3B8"
+- text text="Backlog" [YbxGH] fill="#0F172A" font=Sora fs=14 fw="700"
+- frame col1Count [QiDrm] padding=[2,8] fill="#F1F5F9" r=999
+- text text="3" [DjfVY] fill="#64748B" font=Space Mono fs=11 fw="700"
+- frame Card-Auth Service [U945Q] layout=vertical gap=10 padding=14 w="fill_container" fill="#F8FAFC" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=10
+- text text="Auth Service" [aR8QS] fill="#0F172A" font=Sora fs=13 fw="700"
+- text text="OAuth2 + JWT token provider for microservices auth" [rzgGW] w="fill_container" fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame card1Tags [1n2ud] gap=6
+- frame card1Tag1 [QDe2s] padding=[3,8] fill="#EFF6FF" r=6
+- frame card1Tag2 [dGLId] padding=[3,8] fill="#FEF3C7" r=6
+- frame card1Footer [N2luy] w="fill_container"
+- text text="4 stories" [pP0Hc] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- text text="Feb 18" [M5bKP] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- frame Card-Log Aggregator [jkwHP] layout=vertical gap=10 padding=14 w="fill_container" fill="#F8FAFC" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=10
+- text text="Log Aggregator" [vFrGv] fill="#0F172A" font=Sora fs=13 fw="700"
+- text text="Centralized logging pipeline with ELK stack integration" [Uzcq5] w="fill_container" fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame card2Tags [jnRKC] gap=6
+- frame card2Tag1 [DwE5E] padding=[3,8] fill="#F0FDF4" r=6
+- frame card2Footer [mOwAt] w="fill_container"
+- text text="6 stories" [Vpie0] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- text text="Feb 15" [CZV3A] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- frame Card-Config Manager [vMBKS] layout=vertical gap=10 padding=14 w="fill_container" fill="#F8FAFC" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=10
+- text text="Config Manager" [rtUmu] fill="#0F172A" font=Sora fs=13 fw="700"
+- text text="Dynamic configuration service with hot-reload support" [ocOUM] w="fill_container" fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame card3Tags [B1QlV] gap=6
+- frame card3Tag1 [5sl7f] padding=[3,8] fill="#FDF2F8" r=6
+- frame card3Footer [6ljux] w="fill_container"
+- text text="3 stories" [t4ReD] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- text text="Feb 12" [ZHds6] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- frame In Progress Column [TK1EZ] layout=vertical gap=12 padding=[16,14] w="fill_container" h="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame colHeader [ZOy0E] w="fill_container"
+- frame col2Left [4TgG1] gap=8
+- ellipse col2Dot [xfS7l] w=10 h=10 fill="#2563EB"
+- text text="In Progress" [aTl5M] fill="#0F172A" font=Sora fs=14 fw="700"
+- frame col2Count [751Cv] padding=[2,8] fill="#EFF6FF" r=999
+- text text="3" [uaFBC] fill="#2563EB" font=Space Mono fs=11 fw="700"
+- frame Card-MQ Framework [ojUpj] layout=vertical gap=10 padding=14 w="fill_container" fill="#F8FAFC" stroke={"align":"inside","thickness":1,"fill":"#BFDBFE"} r=10
+- text text="MQ Framework" [5EyGH] fill="#0F172A" font=Sora fs=13 fw="700"
+- text text="Message queue abstraction layer with retry & DLQ support" [vhXRT] w="fill_container" fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame cardAProgress [Mlo0G] layout=none w="fill_container" h=4
+- rectangle cardABarBg [6lbCv] w="fill_container(219)" h=4 fill="#E2E8F0" r=2
+- rectangle cardABar [SBbjf] w=120 h=4 fill="#2563EB" r=2
+- frame cardATags [Ecnoz] gap=6
+- frame cardATag1 [Ktejh] padding=[3,8] fill="#EFF6FF" r=6
+- frame cardATag2 [Hg9oV] padding=[3,8] fill="#FEF2F2" r=6
+- frame cardAFooter [40aUh] w="fill_container"
+- text text="8 stories · 62%" [Py3Rx] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- text text="Feb 20" [2hfIU] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- frame Card-API Gateway [pvray] layout=vertical gap=10 padding=14 w="fill_container" fill="#F8FAFC" stroke={"align":"inside","thickness":1,"fill":"#BFDBFE"} r=10
+- text text="API Gateway" [8oIFr] fill="#0F172A" font=Sora fs=13 fw="700"
+- text text="Rate limiting, routing & request validation gateway" [kNuu7] w="fill_container" fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame cardBTags [DTQTj] gap=6
+- frame cardBTag1 [FAuPP] padding=[3,8] fill="#F0FDF4" r=6
+- frame cardBFooter [F2Ert] w="fill_container"
+- text text="5 stories · 40%" [Il5gz] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- text text="Feb 19" [WWitx] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- frame Card-Worker Pool [CkQGv] layout=vertical gap=10 padding=14 w="fill_container" fill="#F8FAFC" stroke={"align":"inside","thickness":1,"fill":"#BFDBFE"} r=10
+- text text="Worker Pool" [rBjrj] fill="#0F172A" font=Sora fs=13 fw="700"
+- text text="Concurrency-managed worker threads with graceful shutdown" [913DH] w="fill_container" fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame cardCTags [25UZo] gap=6
+- frame cardCTag1 [KVW4T] padding=[3,8] fill="#EFF6FF" r=6
+- frame cardCFooter [Jx7FK] w="fill_container"
+- text text="3 stories · 33%" [6hBbd] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- text text="Feb 17" [YhrQ7] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- frame Review Column [YOP3h] layout=vertical gap=12 padding=[16,14] w="fill_container" h="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame colHeader [8WFhD] w="fill_container"
+- frame col3Left [dmgtp] gap=8
+- ellipse col3Dot [UGkHh] w=10 h=10 fill="#D97706"
+- text text="Review" [8Psj9] fill="#0F172A" font=Sora fs=14 fw="700"
+- frame col3Count [L6d4E] padding=[2,8] fill="#FFFBEB" r=999
+- text text="1" [Peax1] fill="#D97706" font=Space Mono fs=11 fw="700"
+- frame Card-Scheduler Engine [dDZt2] layout=vertical gap=10 padding=14 w="fill_container" fill="#F8FAFC" stroke={"align":"inside","thickness":1,"fill":"#FDE68A"} r=10
+- text text="Scheduler Engine" [PCYwq] fill="#0F172A" font=Sora fs=13 fw="700"
+- text text="Cron-based task scheduler with delay queue capabilities" [99n2r] w="fill_container" fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame cardRTags [uYSST] gap=6
+- frame cardRTag1 [XaeeI] padding=[3,8] fill="#FEF3C7" r=6
+- frame cardRTag2 [d2a9p] padding=[3,8] fill="#FEF2F2" r=6
+- frame cardRFooter [xyaKZ] w="fill_container"
+- text text="5 stories · 80%" [M3Rf7] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- text text="Feb 16" [cwwLx] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- frame Done Column [LC9il] layout=vertical gap=12 padding=[16,14] w="fill_container" h="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame colHeader [WG0ol] w="fill_container"
+- frame col4Left [pZk9M] gap=8
+- ellipse col4Dot [xjwTM] w=10 h=10 fill="#22C55E"
+- text text="Done" [0Yykj] fill="#0F172A" font=Sora fs=14 fw="700"
+- frame col4Count [Jm4bi] padding=[2,8] fill="#F0FDF4" r=999
+- text text="2" [517E1] fill="#22C55E" font=Space Mono fs=11 fw="700"
+- frame Card-Health Monitor [e07kj] layout=vertical gap=10 padding=14 w="fill_container" fill="#F8FAFC" stroke={"align":"inside","thickness":1,"fill":"#BBF7D0"} r=10
+- frame cardD1Title [pXK3j] gap=6
+- icon_font cardD1Check [wIWG9] w=14 h=14 fill="#22C55E"
+- text text="Health Monitor" [4EPmW] fill="#0F172A" font=Sora fs=13 fw="700"
+- text text="System health checking with heartbeat and probe endpoints" [6TvyP] w="fill_container" fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame cardD1Tags [GTlES] gap=6
+- frame cardD1Tag1 [USVlm] padding=[3,8] fill="#F0FDF4" r=6
+- frame cardD1Footer [OUkhX] w="fill_container"
+- text text="3 stories · 100%" [qY6JI] fill="#22C55E" font=Space Mono fs=9 fw="700"
+- text text="Feb 10" [hcpcp] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- frame Card-Retry Engine [WG7xi] layout=vertical gap=10 padding=14 w="fill_container" fill="#F8FAFC" stroke={"align":"inside","thickness":1,"fill":"#BBF7D0"} r=10
+- frame cardD2Title [0y9y0] gap=6
+- icon_font cardD2Check [KvNjK] w=14 h=14 fill="#22C55E"
+- text text="Retry Engine" [xpNT5] fill="#0F172A" font=Sora fs=13 fw="700"
+- text text="Exponential backoff retry with configurable strategies" [gCKf5] w="fill_container" fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame cardD2Tags [co1l5] gap=6
+- frame cardD2Tag1 [4JDDA] padding=[3,8] fill="#EFF6FF" r=6
+- frame cardD2Footer [nm3EX] w="fill_container"
+- text text="4 stories · 100%" [qsEX6] fill="#22C55E" font=Space Mono fs=9 fw="700"
+- text text="Feb 8" [L3zAq] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+
+### MQ Projects · New Project Modal [1gU10]
+- frame MQ Projects · New Project Modal [1gU10] layout=none w=1440 h=1220 fill="#EEF3FB"
+- frame Sidebar [Sy4fq] layout=vertical gap=18 padding=[20,18] w=248 h="fill_container(1220)" fill="#071428"
+- frame Brand [YvIUl] layout=vertical gap=4 padding=[0,0,12,0] w="fill_container"
+- text text="AHA LOOP MQ" [45Ng9] fill="#FFFFFF" font=Sora fs=26 fw="800"
+- text text="Control plane" [TQYi7] fill="#8FA4CC" font=Space Mono fs=11 fw="normal"
+- frame Nav [KFX7Y] layout=vertical gap=8 w="fill_container"
+- frame navProjects [N0M8B] gap=10 padding=[10,12] w="fill_container" fill="#F4F8FF" r=10
+- icon_font navProjectsIcon [pC4jO] w=16 h=16 fill="#0E121B"
+- text text="Projects" [fpLrh] fill="#0E121B" font=Sora fs=14 fw="600"
+- frame navOverview [Z7ncj] gap=10 padding=[10,12] w="fill_container" r=10
+- icon_font navOverviewIcon [Z3Xsd] w=16 h=16 fill="#99A3B8"
+- text text="Overview" [xkEUX] fill="#99A3B8" font=Sora fs=14 fw="normal"
+- frame navStories [5bmfD] gap=10 padding=[10,12] w="fill_container" r=10
+- icon_font navStoriesIcon [7qJnF] w=16 h=16 fill="#99A3B8"
+- text text="Stories" [j7c5R] fill="#99A3B8" font=Sora fs=14 fw="normal"
+- frame navIncidents [3Upna] gap=10 padding=[10,12] w="fill_container" r=10
+- icon_font navIncidentsIcon [qBfR9] w=16 h=16 fill="#99A3B8"
+- text text="Incidents" [bXuF2] fill="#99A3B8" font=Sora fs=14 fw="normal"
+- frame Main [hl3iK] layout=vertical w=1192 h=1220 fill="#EEF3FB"
+- frame Header [aYA5Z] padding=[24,28] w="fill_container" fill="#081A33"
+- frame headLeft [U2N5J] layout=vertical gap=4
+- text text="PROJECTS" [znG3Z] fill="#FFFFFF" font=Sora fs=30 fw="800"
+- text text="kanban board · project lifecycle · click to enter details" [uQu2I] fill="#9CB1D7" font=Space Mono fs=11 fw="normal"
+- frame headRight [20qty] gap=8
+- frame tagTotal [WodlD] padding=[6,10] fill="#173A6C" r=999
+- text text="total: 9 projects" [KDxTL] fill="#D7E7FF" font=Space Mono fs=10 fw="700"
+- frame btnNew [ttaIP] gap=6 padding=[6,14] fill="#2563EB" r=999
+- icon_font btnNewIcon [uCkYV] w=12 h=12 fill="#FFFFFF"
+- text text="New Project" [lCApO] fill="#FFFFFF" font=Sora fs=11 fw="700"
+- frame Body [CMjla] gap=16 padding=[18,22] w="fill_container" h="fill_container" fill="#EDF2FB"
+- frame Backlog Column [nBRES] layout=vertical gap=12 padding=[16,14] w="fill_container" h="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame colHeader [XoYyv] w="fill_container"
+- frame col1Left [be3nD] gap=8
+- ellipse col1Dot [u04GV] w=10 h=10 fill="#94A3B8"
+- text text="Backlog" [xgUkz] fill="#0F172A" font=Sora fs=14 fw="700"
+- frame col1Count [85NBU] padding=[2,8] fill="#F1F5F9" r=999
+- text text="3" [YRtVK] fill="#64748B" font=Space Mono fs=11 fw="700"
+- frame Card-Auth Service [WPxM3] layout=vertical gap=10 padding=14 w="fill_container" fill="#F8FAFC" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=10
+- text text="Auth Service" [L69NC] fill="#0F172A" font=Sora fs=13 fw="700"
+- text text="OAuth2 + JWT token provider for microservices auth" [KKkal] w="fill_container" fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame card1Tags [nUqwK] gap=6
+- frame card1Tag1 [1LTM6] padding=[3,8] fill="#EFF6FF" r=6
+- frame card1Tag2 [Arkfa] padding=[3,8] fill="#FEF3C7" r=6
+- frame card1Footer [ikqcX] w="fill_container"
+- text text="4 stories" [TrQCG] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- text text="Feb 18" [0JSxt] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- frame Card-Log Aggregator [1mIF6] layout=vertical gap=10 padding=14 w="fill_container" fill="#F8FAFC" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=10
+- text text="Log Aggregator" [PSWO3] fill="#0F172A" font=Sora fs=13 fw="700"
+- text text="Centralized logging pipeline with ELK stack integration" [JWX0G] w="fill_container" fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame card2Tags [dZdJ1] gap=6
+- frame card2Tag1 [mDaYq] padding=[3,8] fill="#F0FDF4" r=6
+- frame card2Footer [YAFU6] w="fill_container"
+- text text="6 stories" [oJIHN] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- text text="Feb 15" [AofQ4] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- frame Card-Config Manager [5d1YD] layout=vertical gap=10 padding=14 w="fill_container" fill="#F8FAFC" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=10
+- text text="Config Manager" [3b89d] fill="#0F172A" font=Sora fs=13 fw="700"
+- text text="Dynamic configuration service with hot-reload support" [ZeGUO] w="fill_container" fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame card3Tags [NCciO] gap=6
+- frame card3Tag1 [KOu7W] padding=[3,8] fill="#FDF2F8" r=6
+- frame card3Footer [xQAkh] w="fill_container"
+- text text="3 stories" [MS27S] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- text text="Feb 12" [EkDTo] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- frame In Progress Column [FzSUt] layout=vertical gap=12 padding=[16,14] w="fill_container" h="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame colHeader [63oCX] w="fill_container"
+- frame col2Left [DA2r0] gap=8
+- ellipse col2Dot [dMUZy] w=10 h=10 fill="#2563EB"
+- text text="In Progress" [CuWEG] fill="#0F172A" font=Sora fs=14 fw="700"
+- frame col2Count [FuLA9] padding=[2,8] fill="#EFF6FF" r=999
+- text text="3" [4LEWZ] fill="#2563EB" font=Space Mono fs=11 fw="700"
+- frame Card-MQ Framework [foIA4] layout=vertical gap=10 padding=14 w="fill_container" fill="#F8FAFC" stroke={"align":"inside","thickness":1,"fill":"#BFDBFE"} r=10
+- text text="MQ Framework" [cf1xx] fill="#0F172A" font=Sora fs=13 fw="700"
+- text text="Message queue abstraction layer with retry & DLQ support" [7qsF9] w="fill_container" fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame cardAProgress [R6OKN] layout=none w="fill_container" h=4
+- rectangle cardABarBg [RB1jl] w="fill_container(219)" h=4 fill="#E2E8F0" r=2
+- rectangle cardABar [uUP84] w=120 h=4 fill="#2563EB" r=2
+- frame cardATags [4DGqq] gap=6
+- frame cardATag1 [luIaz] padding=[3,8] fill="#EFF6FF" r=6
+- frame cardATag2 [TO9aO] padding=[3,8] fill="#FEF2F2" r=6
+- frame cardAFooter [SDlxU] w="fill_container"
+- text text="8 stories · 62%" [aKYr4] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- text text="Feb 20" [AcyCW] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- frame Card-API Gateway [GjYew] layout=vertical gap=10 padding=14 w="fill_container" fill="#F8FAFC" stroke={"align":"inside","thickness":1,"fill":"#BFDBFE"} r=10
+- text text="API Gateway" [XGwTO] fill="#0F172A" font=Sora fs=13 fw="700"
+- text text="Rate limiting, routing & request validation gateway" [GB0xV] w="fill_container" fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame cardBTags [uTEZ9] gap=6
+- frame cardBTag1 [vDHZq] padding=[3,8] fill="#F0FDF4" r=6
+- frame cardBFooter [R5ris] w="fill_container"
+- text text="5 stories · 40%" [echTS] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- text text="Feb 19" [BwZdC] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- frame Card-Worker Pool [Hxw0Y] layout=vertical gap=10 padding=14 w="fill_container" fill="#F8FAFC" stroke={"align":"inside","thickness":1,"fill":"#BFDBFE"} r=10
+- text text="Worker Pool" [hxK7T] fill="#0F172A" font=Sora fs=13 fw="700"
+- text text="Concurrency-managed worker threads with graceful shutdown" [ilmmB] w="fill_container" fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame cardCTags [vrpRu] gap=6
+- frame cardCTag1 [2RZKY] padding=[3,8] fill="#EFF6FF" r=6
+- frame cardCFooter [K42YL] w="fill_container"
+- text text="3 stories · 33%" [V1WqM] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- text text="Feb 17" [wYkmK] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- frame Review Column [yylIV] layout=vertical gap=12 padding=[16,14] w="fill_container" h="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame colHeader [LDbNn] w="fill_container"
+- frame col3Left [nKVPm] gap=8
+- ellipse col3Dot [LAP79] w=10 h=10 fill="#D97706"
+- text text="Review" [Yg6Ty] fill="#0F172A" font=Sora fs=14 fw="700"
+- frame col3Count [FkVT6] padding=[2,8] fill="#FFFBEB" r=999
+- text text="1" [M78DC] fill="#D97706" font=Space Mono fs=11 fw="700"
+- frame Card-Scheduler Engine [LiFcE] layout=vertical gap=10 padding=14 w="fill_container" fill="#F8FAFC" stroke={"align":"inside","thickness":1,"fill":"#FDE68A"} r=10
+- text text="Scheduler Engine" [ej37g] fill="#0F172A" font=Sora fs=13 fw="700"
+- text text="Cron-based task scheduler with delay queue capabilities" [CBgET] w="fill_container" fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame cardRTags [Bt0WU] gap=6
+- frame cardRTag1 [nIkAi] padding=[3,8] fill="#FEF3C7" r=6
+- frame cardRTag2 [ZKtW8] padding=[3,8] fill="#FEF2F2" r=6
+- frame cardRFooter [XDCLJ] w="fill_container"
+- text text="5 stories · 80%" [6AjZ2] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- text text="Feb 16" [JlhzX] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- frame Done Column [fEh9i] layout=vertical gap=12 padding=[16,14] w="fill_container" h="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=14
+- frame colHeader [M2X8N] w="fill_container"
+- frame col4Left [SQNeN] gap=8
+- ellipse col4Dot [PhQCW] w=10 h=10 fill="#22C55E"
+- text text="Done" [utCLp] fill="#0F172A" font=Sora fs=14 fw="700"
+- frame col4Count [R7HkM] padding=[2,8] fill="#F0FDF4" r=999
+- text text="2" [WooNM] fill="#22C55E" font=Space Mono fs=11 fw="700"
+- frame Card-Health Monitor [AJBzq] layout=vertical gap=10 padding=14 w="fill_container" fill="#F8FAFC" stroke={"align":"inside","thickness":1,"fill":"#BBF7D0"} r=10
+- frame cardD1Title [FZMVE] gap=6
+- icon_font cardD1Check [bOlOu] w=14 h=14 fill="#22C55E"
+- text text="Health Monitor" [TNiMd] fill="#0F172A" font=Sora fs=13 fw="700"
+- text text="System health checking with heartbeat and probe endpoints" [c11aO] w="fill_container" fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame cardD1Tags [JooPt] gap=6
+- frame cardD1Tag1 [lM1DF] padding=[3,8] fill="#F0FDF4" r=6
+- frame cardD1Footer [sf6kn] w="fill_container"
+- text text="3 stories · 100%" [18Ozj] fill="#22C55E" font=Space Mono fs=9 fw="700"
+- text text="Feb 10" [U6ou3] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- frame Card-Retry Engine [r8Wpy] layout=vertical gap=10 padding=14 w="fill_container" fill="#F8FAFC" stroke={"align":"inside","thickness":1,"fill":"#BBF7D0"} r=10
+- frame cardD2Title [f1xfQ] gap=6
+- icon_font cardD2Check [itBjt] w=14 h=14 fill="#22C55E"
+- text text="Retry Engine" [XYGQh] fill="#0F172A" font=Sora fs=13 fw="700"
+- text text="Exponential backoff retry with configurable strategies" [xTUap] w="fill_container" fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame cardD2Tags [nYWiX] gap=6
+- frame cardD2Tag1 [0fsg3] padding=[3,8] fill="#EFF6FF" r=6
+- frame cardD2Footer [8zyNE] w="fill_container"
+- text text="4 stories · 100%" [aU22D] fill="#22C55E" font=Space Mono fs=9 fw="700"
+- text text="Feb 8" [NwY44] fill="#94A3B8" font=Space Mono fs=9 fw="normal"
+- frame Modal Overlay [eYyRD] layout=none w=1440 h=1220 fill="#00000066"
+- frame Modal Container [aXmCR] layout=vertical w=1000 h=1060 fill="#FFFFFF" r=20
+- frame Modal Header [F12Bp] padding=[20,28] w="fill_container" fill="#0A1C3A"
+- frame mhLeft [zpW8Y] layout=vertical gap=4
+- text text="NEW PROJECT SETUP" [AjvuI] fill="#FFFFFF" font=Sora fs=22 fw="800"
+- text text="Step 1 Workspace · Step 2 Vision · Step 3 Preflight · Step 4 Boot" [GYulv] fill="#A9B8D2" font=Space Mono fs=10 fw="normal"
+- frame mhRight [sy25G] gap=10
+- frame mhGuide [RHZtb] gap=6 padding=[8,14] fill="#FF7A33" r=8
+- icon_font mhGuideIcon [WcxZ3] w=14 h=14 fill="#FFFFFF"
+- text text="GUIDE FLOW" [Y9JiX] fill="#FFFFFF" font=Space Mono fs=10 fw="700"
+- frame mhClose [ghTV8] padding=8 fill="#1A3358" r=8
+- icon_font mhCloseIcon [g30Oa] w=16 h=16 fill="#9CB1D7"
+- frame Modal Body [dgCjO] layout=vertical gap=20 padding=[24,32] w="fill_container" h="fill_container" fill="#F8FAFC"
+- frame Progress Wrap [hug5K] layout=none w="fill_container" h=4 fill="#E2E8F0" r=2
+- rectangle progressFill [Zudgh] w=250 h=4 fill="#1E4ED8" r=2
+- frame StepTabs [0wLKM] gap=8 w="fill_container"
+- frame step1 [Gmpxx] padding=[8,14] fill="#1E4ED8" r=999
+- text text="1 Workspace" [zNb1Y] fill="#FFFFFF" font=Space Mono fs=10 fw="700"
+- frame step2 [gp4Lt] padding=[8,14] fill="#EEF2FF" stroke={"align":"inside","thickness":1,"fill":"#CBD5E1"} r=999
+- text text="2 Vision" [stFOM] fill="#334155" font=Space Mono fs=10 fw="700"
+- frame step3 [rXe9g] padding=[8,14] fill="#EEF2FF" stroke={"align":"inside","thickness":1,"fill":"#CBD5E1"} r=999
+- text text="3 Preflight" [sUAhS] fill="#334155" font=Space Mono fs=10 fw="700"
+- frame step4 [1Ng2i] padding=[8,14] fill="#EEF2FF" stroke={"align":"inside","thickness":1,"fill":"#CBD5E1"} r=999
+- text text="4 Boot" [28FnU] fill="#334155" font=Space Mono fs=10 fw="700"
+- frame ActiveStep Panel [barAk] layout=vertical gap=16 padding=[20,24] w="fill_container" h="fill_container" fill="#FFFFFF" stroke={"align":"inside","thickness":1,"fill":"#E2E8F0"} r=12
+- frame panelHead [DEZ6f] w="fill_container"
+- frame panelHeadLeft [69wTv] gap=8
+- frame panelBadge [2k390] padding=[4,10] fill="#EEF2FF" r=999
+- frame formGrid [YJXen] layout=vertical gap=12 w="fill_container"
+- frame field-workspaceRoot [EofdH] layout=vertical gap=4 w="fill_container"
+- frame field-mqRoot [1QVRP] layout=vertical gap=4 w="fill_container"
+- frame fieldRowPair [qbyh4] gap=12 w="fill_container"
+- frame toolField [0Tuuf] layout=vertical gap=4 w="fill_container"
+- frame semField [9bqCf] layout=vertical gap=4 w="fill_container"
+- frame statusLine [VUynp] w="fill_container"
+- text text="validation: 2 passed · 0 failed" [lHq2K] fill="#166534" font=Space Mono fs=10 fw="normal"
+- text text="last saved: --" [TjJL9] fill="#64748B" font=Space Mono fs=10 fw="normal"
+- frame actions [m2eWO] w="fill_container"
+- frame actionsLeft [vzgFn] gap=8
+- frame btnNext [c6HD2] padding=[10,16] fill="#FF7A33" r=10
+- frame WizardNav [YCL8Y] w="fill_container"
+- frame prevBtn [ufK7T] padding=[8,14] fill="#E2E8F0" r=8
+- text text="Prev" [rMbd7] fill="#334155" font=Space Mono fs=11 fw="700"
+- text text="step 1 / 4" [4qRpM] fill="#64748B" font=Space Mono fs=11 fw="normal"
+- frame nextStep [fXWV8] padding=[8,14] fill="#FF7A33" r=8
+- text text="Next Step" [CuNTa] fill="#FFFFFF" font=Space Mono fs=11 fw="700"
