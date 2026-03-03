@@ -17,6 +17,7 @@ async function loadPrds(roadmapFile, store, logger = console, options = {}) {
   const raw = await fsp.readFile(roadmapFile, "utf8");
   const roadmap = JSON.parse(raw);
   const resetBeforeLoad = options.resetBeforeLoad !== false;
+  const workspacePath = path.resolve(options.workspacePath || process.cwd());
   const defaultProjectId = _resolveProjectId(options.projectId, roadmap?.projectId, roadmap?.project?.id);
 
   if (resetBeforeLoad && typeof store.resetExecutionState === "function") {
@@ -65,7 +66,7 @@ async function loadPrds(roadmapFile, store, logger = console, options = {}) {
       dependencies: prdDependencies,
       milestoneId: prdData.milestoneId || null,
       milestoneTitle: prdData.milestoneTitle || null,
-      workspacePath: store.stateFile ? path.dirname(path.dirname(store.stateFile)) : process.cwd(),
+      workspacePath,
       createdAt: nowEast8Iso(),
     };
 
@@ -117,6 +118,7 @@ async function loadPrds(roadmapFile, store, logger = console, options = {}) {
         dependencies: storyDependencies,
         prdDependencies: storyPrdDependencies,
         priority: storyData.priority || 99,
+        workspacePath,
         worktreeId: null,
         sessionId: null,
         tool: storyData.tool || null,
@@ -163,6 +165,7 @@ async function loadActivePrd(prdFile, store, logger = console, options = {}) {
   const raw = await fsp.readFile(prdFile, "utf8");
   const prdData = JSON.parse(raw);
   const resetBeforeLoad = options.resetBeforeLoad !== false;
+  const workspacePath = path.resolve(options.workspacePath || process.cwd());
   const defaultProjectId = _resolveProjectId(options.projectId, prdData?.projectId, prdData?.project?.id);
 
   if (resetBeforeLoad && typeof store.resetExecutionState === "function") {
@@ -196,7 +199,7 @@ async function loadActivePrd(prdFile, store, logger = console, options = {}) {
     status: "queued",
     stories: [],
     dependencies: _normalizeDependencyRefs(prdData.dependsOn || prdData.dependencies).filter((ref) => _isPrdRef(ref)),
-    workspacePath: store.stateFile ? path.dirname(path.dirname(store.stateFile)) : process.cwd(),
+    workspacePath,
     createdAt: nowEast8Iso(),
   };
 
@@ -244,6 +247,7 @@ async function loadActivePrd(prdFile, store, logger = console, options = {}) {
       dependencies: storyDependencies,
       prdDependencies,
       priority: us.priority || 99,
+      workspacePath,
       worktreeId: null,
       sessionId: null,
       tool: us.tool || null,

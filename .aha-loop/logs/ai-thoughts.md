@@ -729,3 +729,61 @@ Runtime-level multi-project isolation and stricter acceptance-criteria enforceme
 整理了当前可用启动方式、前端项目控制流程，以及 vision 输入能力边界（当前仅展示，不支持前端录入/触发 vision pipeline）。
 
 ---
+## 2026-03-03 12:17:07 | Task: 前端入口与进展复核 | Phase: Complete
+
+### Context
+用户要求复核当前前端集成进展，并补一个简单 Node.js 入口用于启动 web 前端页面。
+
+### Decision Point
+- Considering: 继续沿用 
+pm run ui（会启动完整引擎，依赖 RabbitMQ）
+- Considering: 新增仅前端/监控入口
+- **Chosen:** 新增 src/web.js 独立入口
+- **Reason:** 降低启动门槛，支持仅查看和项目管理页面，不强依赖调度与 worker。
+
+### Delivered
+- 新增 src/web.js（standalone monitor + static web）
+- 新增脚本 
+pm run web、
+pm run web:dev
+- README 补充 web 启动方式
+
+### Validation
+- projects.html=200
+- /stories=200
+
+---
+## 2026-03-03 12:21:42 | Task: web入口增强 | Phase: Complete
+
+### Decision Point
+src/web.js 初版将 control 置空，页面控制按钮会返回 501。
+已改为提供 lightweight control stub，保持前端联调体验。
+
+### Validation
+- /control POST 返回 200（模拟结果）
+
+---
+## 2026-03-03 12:39:51 | Task: 全局项目持久化改造 | Phase: Complete
+
+### Context
+用户指出多项目管理应采用全局项目池，而不是按 cwd 隔离状态。
+
+### Decision Point
+- Considering: 继续使用 workspace/.aha-loop/state.json
+- Considering: 改为用户级全局 state，并保留覆盖参数
+- **Chosen:** 全局 state 默认 + 兼容覆盖 + 旧 state 自动迁移一次
+- **Reason:** 更符合多项目控制台与 session 预期，避免目录切换导致项目视图割裂。
+
+### Delivered
+- 默认 state 迁移到用户级目录（config 层）
+- 新增 AHA_LOOP_HOME / AHA_LOOP_STATE_FILE / --state-file
+- 启动时自动迁移旧 workspace state（仅目标不存在时）
+- prd-loader workspacePath 改为显式传入，去除 stateFile 反推
+- index/pipeline/monitor boot 全链路传递 workspacePath
+
+### Validation
+- PASS src/__tests__/config-global-state.test.js
+- PASS src/monitor/__tests__/monitor-project-scope-and-control.test.js
+- PASS src/pipeline/__tests__/prd-loader-project-id.test.js
+
+---

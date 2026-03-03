@@ -2,6 +2,32 @@
 
 状态机 + RabbitMQ + Git Worktree 并行调度框架。
 
+## 作为 npm 应用使用
+
+安装（全局）：
+
+```bash
+npm install -g aha-loop-mq
+```
+
+可用命令：
+
+- `aha-loop` / `aha-loop-mq`：启动完整引擎
+- `aha-loop-web`：仅启动前端页面与监控 API（联调模式）
+
+示例：
+
+```bash
+aha-loop --vision ./project.vision.md --workspace /path/to/project
+aha-loop-web --monitor-port 17373
+```
+
+也可直接使用 npx：
+
+```bash
+npx -y aha-loop-mq --vision ./project.vision.md --workspace /path/to/project
+```
+
 ## 唯一入口
 
 用户只需提供 `project.vision.md`:
@@ -15,6 +41,27 @@ npx aha-loop --vision ./project.vision.md --workspace /path/to/project
 ```bash
 npm run ui
 ```
+
+仅启动前端页面与只读/项目管理 API（不启动 MQ worker/scheduler）:
+
+```bash
+npm run web
+```
+
+说明：`web` 模式下控制动作返回模拟结果，仅用于页面联调/演示。
+
+## 全局项目持久化
+
+- 默认不再按当前工作目录隔离状态。
+- 项目与运行态统一持久化到用户级目录：
+  - Windows: `%APPDATA%\\aha-loop-mq\\state.json`
+  - macOS: `~/Library/Application Support/aha-loop-mq/state.json`
+  - Linux: `$XDG_STATE_HOME/aha-loop-mq/state.json`（未设置时为 `~/.local/state/aha-loop-mq/state.json`）
+- 首次启动时，如果全局 state 不存在且当前 workspace 下存在旧 `.aha-loop/state.json`，会自动迁移一次。
+- 可覆盖：
+  - `AHA_LOOP_HOME=/path/to/home`
+  - `AHA_LOOP_STATE_FILE=/path/to/state.json`
+  - `node src/index.js --state-file /path/to/state.json`
 
 系统自动完成:
 1. **Vision → Architecture** — AI 分析愿景, 生成架构文档

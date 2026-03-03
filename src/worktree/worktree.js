@@ -22,6 +22,7 @@ class WorktreeManager {
   }
 
   async ensure(story) {
+    const workspace = this._resolveWorkspaceForStory(story);
     const worktreeFilter = { storyId: story.id, status: "active" };
     if (story.projectId) worktreeFilter.projectId = story.projectId;
     const existing = this.store.listWorktrees(worktreeFilter);
@@ -31,23 +32,24 @@ class WorktreeManager {
     const branchRef = `refs/heads/${branch}`;
     const wtPath = path.join(this.worktreeDir, story.id);
 
-    const reused = await this._discoverExisting(branchRef, wtPath);
-    if (reused) return this._registerReusedWorktree(story.id, story.projectId || null, branch, reused.path);
+    const reused = await this._discoverExisting(branchRef, wtPath, workspace);
+    if (reused) return this._registerReusedWorktree(story.id, story.projectId || null, branch, reused.path, workspace);
 
-    const branchExists = await this._branchExists(branchRef);
+    const branchExists = await this._branchExists(branchRef, workspace);
     const args = branchExists
       ? ["worktree", "add", wtPath, branch]
       : ["worktree", "add", wtPath, "-b", branch];
 
     try {
-      await exec("git", args, { cwd: this.workspace });
+      await exec("git", args, { cwd: workspace });
       this.logger.info("[worktree] created", {
         event: "worktree_create",
         storyId: story.id,
         branch,
         path: wtPath,
+        workspace,
       });
-      return this._registerNewWorktree(story.id, story.projectId || null, branch, wtPath);
+      return this._registerNewWorktree(story.id, story.projectId || null, branch, wtPath, workspace);
     } catch (err) {
       const message = String(err?.stderr || err?.message || "");
       const recoverable = (
@@ -57,7 +59,7 @@ class WorktreeManager {
       );
       if (!recoverable) throw err;
 
-      const fallback = await this._discoverExisting(branchRef, wtPath);
+      const fallback = await this._discoverExisting(branchRef, wtPath, workspace);
       if (!fallback) throw err;
 
       this.logger.warn("[worktree] reused existing worktree after create conflict", {
@@ -67,22 +69,23 @@ class WorktreeManager {
         path: fallback.path,
         error: message,
       });
-      return this._registerReusedWorktree(story.id, story.projectId || null, branch, fallback.path);
+      return this._registerReusedWorktree(story.id, story.projectId || null, branch, fallback.path, workspace);
     }
   }
 
   async merge(worktreeId) {
     const wt = this.store.getWorktree(worktreeId);
     if (!wt) throw new Error(`worktree ${worktreeId} not found`);
+    const workspace = path.resolve(wt.workspacePath || this.workspace);
 
     try {
       const { stdout: mainBranch } = await exec(
         "git", ["symbolic-ref", "--short", "HEAD"],
-        { cwd: this.workspace },
+        { cwd: workspace },
       );
 
       await exec("git", ["merge", wt.branch, "--no-ff", "-m", `merge: ${wt.storyId}`], {
-        cwd: this.workspace,
+        cwd: workspace,
       });
 
       wt.status = "merged";
@@ -93,12 +96,13 @@ class WorktreeManager {
         storyId: wt.storyId || null,
         branch: wt.branch,
         targetBranch: mainBranch.trim(),
+        workspace,
       });
       return { ok: true };
     } catch (err) {
       const msg = err.stderr || err.message || "";
       if (msg.includes("CONFLICT")) {
-        await exec("git", ["merge", "--abort"], { cwd: this.workspace }).catch(() => {});
+        await exec("git", ["merge", "--abort"], { cwd: workspace }).catch(() => {});
         const conflicts = msg.match(/CONFLICT.*?:\s*(.+)/g) || [msg];
         this.logger.error("[worktree] merge conflict", {
           event: "fail",
@@ -115,9 +119,10 @@ class WorktreeManager {
   async cleanup(worktreeId) {
     const wt = this.store.getWorktree(worktreeId);
     if (!wt) return;
+    const workspace = path.resolve(wt.workspacePath || this.workspace);
 
     try {
-      await exec("git", ["worktree", "remove", wt.path, "--force"], { cwd: this.workspace });
+      await exec("git", ["worktree", "remove", wt.path, "--force"], { cwd: workspace });
     } catch {
       this.logger.warn("[worktree] remove failed", {
         event: "reconcile",
@@ -128,7 +133,7 @@ class WorktreeManager {
     }
 
     try {
-      await exec("git", ["branch", "-D", wt.branch], { cwd: this.workspace });
+      await exec("git", ["branch", "-D", wt.branch], { cwd: workspace });
     } catch {
       this.logger.warn("[worktree] branch delete failed", {
         event: "reconcile",
@@ -145,6 +150,7 @@ class WorktreeManager {
       storyId: wt.storyId || null,
       branch: wt.branch,
       path: wt.path,
+      workspace,
     });
   }
 
@@ -152,18 +158,18 @@ class WorktreeManager {
     return this.store.listWorktrees();
   }
 
-  async _branchExists(branchRef) {
+  async _branchExists(branchRef, workspace = this.workspace) {
     try {
-      await exec("git", ["rev-parse", "--verify", "--quiet", branchRef], { cwd: this.workspace });
+      await exec("git", ["rev-parse", "--verify", "--quiet", branchRef], { cwd: workspace });
       return true;
     } catch {
       return false;
     }
   }
 
-  async _discoverExisting(branchRef, wtPath) {
+  async _discoverExisting(branchRef, wtPath, workspace = this.workspace) {
     const targetPath = path.resolve(wtPath).toLowerCase();
-    const worktrees = await this._listWorktrees();
+    const worktrees = await this._listWorktrees(workspace);
     return worktrees.find((wt) => {
       const samePath = path.resolve(wt.path).toLowerCase() === targetPath;
       const sameBranch = wt.branch === branchRef;
@@ -171,8 +177,8 @@ class WorktreeManager {
     }) || null;
   }
 
-  async _listWorktrees() {
-    const { stdout } = await exec("git", ["worktree", "list", "--porcelain"], { cwd: this.workspace });
+  async _listWorktrees(workspace = this.workspace) {
+    const { stdout } = await exec("git", ["worktree", "list", "--porcelain"], { cwd: workspace });
     const lines = stdout.split(/\r?\n/);
     const items = [];
     let current = null;
@@ -200,13 +206,14 @@ class WorktreeManager {
     return items;
   }
 
-  _registerNewWorktree(storyId, projectId, branch, wtPath) {
+  _registerNewWorktree(storyId, projectId, branch, wtPath, workspacePath = this.workspace) {
     const wt = {
       id: `wt-${crypto.randomUUID().slice(0, 8)}`,
       storyId,
       projectId: projectId || null,
       branch,
       path: wtPath,
+      workspacePath: path.resolve(workspacePath),
       status: "active",
       createdAt: nowEast8Iso(),
       mergedAt: null,
@@ -216,13 +223,14 @@ class WorktreeManager {
     return wt;
   }
 
-  _registerReusedWorktree(storyId, projectId, branch, wtPath) {
+  _registerReusedWorktree(storyId, projectId, branch, wtPath, workspacePath = this.workspace) {
     const wt = {
       id: `wt-${crypto.randomUUID().slice(0, 8)}`,
       storyId,
       projectId: projectId || null,
       branch,
       path: wtPath,
+      workspacePath: path.resolve(workspacePath),
       status: "active",
       createdAt: nowEast8Iso(),
       recoveredAt: nowEast8Iso(),
@@ -231,6 +239,25 @@ class WorktreeManager {
     };
     this.store.setWorktree(wt);
     return wt;
+  }
+
+  _resolveWorkspaceForStory(story) {
+    const fromStory = String(story?.workspacePath || "").trim();
+    if (fromStory) return path.resolve(fromStory);
+
+    const prd = story?.prdId && typeof this.store.getPrd === "function"
+      ? this.store.getPrd(story.prdId)
+      : null;
+    const fromPrd = String(prd?.workspacePath || "").trim();
+    if (fromPrd) return path.resolve(fromPrd);
+
+    const project = story?.projectId && typeof this.store.getProject === "function"
+      ? this.store.getProject(story.projectId)
+      : null;
+    const fromProject = String(project?.workspacePath || "").trim();
+    if (fromProject) return path.resolve(fromProject);
+
+    return this.workspace;
   }
 }
 

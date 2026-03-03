@@ -14,6 +14,7 @@ const { Monitor } = require("./monitor/monitor");
 const { Pipeline } = require("./pipeline/pipeline");
 const { RuntimeControl } = require("./control/runtime-control");
 const { nowEast8Iso } = require("./core/time");
+const { migrateLegacyWorkspaceStateIfNeeded } = require("./core/state-bootstrap");
 
 function hasExistingExecutionState(store) {
   return (
@@ -44,6 +45,7 @@ async function main() {
   const eventBus = getEventBus(logger);
 
   // --- 基础设施 ---
+  await migrateLegacyWorkspaceStateIfNeeded(config, logger);
   const store = new Store(config.stateFile, eventBus, logger);
   await store.init();
 
@@ -79,10 +81,10 @@ async function main() {
       await pipeline.run(config.visionFile);
     } else if (config.prdFile) {
       const { loadActivePrd } = require("./pipeline/prd-loader");
-      await loadActivePrd(config.prdFile, store, logger);
+      await loadActivePrd(config.prdFile, store, logger, { workspacePath: config.workspace });
     } else if (config.roadmapFile) {
       const { loadPrds } = require("./pipeline/prd-loader");
-      await loadPrds(config.roadmapFile, store, logger);
+      await loadPrds(config.roadmapFile, store, logger, { workspacePath: config.workspace });
     }
   }
 

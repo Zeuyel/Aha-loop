@@ -514,6 +514,14 @@ class Scheduler {
     const traceId = story.traceId || `trace-${crypto.randomUUID().slice(0, 12)}`;
     const dispatchAt = nowEast8Iso();
     const projectId = story.projectId || null;
+    const prd = story.prdId && typeof this.store.getPrd === "function" ? this.store.getPrd(story.prdId) : null;
+    const project = projectId && typeof this.store.getProject === "function" ? this.store.getProject(projectId) : null;
+    const workspacePath = String(
+      story.workspacePath
+      || prd?.workspacePath
+      || project?.workspacePath
+      || this.config.workspace,
+    ).trim() || this.config.workspace;
 
     try {
       const wt = await this.worktreeManager.ensure(story);
@@ -589,7 +597,7 @@ class Scheduler {
         acceptanceCriteria: Array.isArray(story.acceptanceCriteria) ? story.acceptanceCriteria : [],
         worktreeId: wtId,
         worktreePath,
-        workspacePath: this.config.workspace,
+        workspacePath,
         tool: story.tool || this.config.defaultTool,
         attempt: story.attempt || 1,
         maxAttempts: story.maxAttempts || this.config.maxAttempts,

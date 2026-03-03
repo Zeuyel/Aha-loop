@@ -270,14 +270,21 @@ runCase("_handleBootStart forwards projectId to loader and keeps old behavior wh
       autoResume: false,
       resetBeforeLoad: false,
     });
-    assert.deepEqual(capturedOptions, { resetBeforeLoad: false, projectId: "proj-a" });
+    assert.deepEqual(capturedOptions, {
+      resetBeforeLoad: false,
+      projectId: "proj-a",
+      workspacePath: process.cwd(),
+    });
 
     await monitor._handleBootStart({
       mode: "reload_from_prd",
       prdFile,
       autoResume: false,
     });
-    assert.deepEqual(capturedOptions, { resetBeforeLoad: true });
+    assert.deepEqual(capturedOptions, {
+      resetBeforeLoad: true,
+      workspacePath: process.cwd(),
+    });
   } finally {
     prdLoader.loadActivePrd = originalLoadActivePrd;
     fs.rmSync(tmpRoot, { recursive: true, force: true });

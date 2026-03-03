@@ -47,7 +47,9 @@ class Pipeline {
       this.logger.info("[pipeline] phase: generating PRDs...");
 
       const { loadPrds } = require("./prd-loader");
-      await loadPrds(this.config.roadmapOutputFile, this.store, this.logger);
+      await loadPrds(this.config.roadmapOutputFile, this.store, this.logger, {
+        workspacePath: this.config.workspace,
+      });
 
       this.store.setPipeline({ ...this.store.getPipeline(), status: "executing" });
       this.logger.info("[pipeline] planning complete, entering execution phase");

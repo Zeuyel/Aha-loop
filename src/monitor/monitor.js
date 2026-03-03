@@ -1300,6 +1300,7 @@ class Monitor {
     return {
       timestamp: nowEast8Iso(),
       workspaceRoot: this.config.workspace,
+      globalHome: this.config.globalHome || null,
       stateFile: this.config.stateFile,
       worktreeDir: this.config.worktreeDir,
       defaultTool: this.config.defaultTool,
@@ -1392,6 +1393,13 @@ class Monitor {
     const autoResume = body.autoResume !== false;
     const resetBeforeLoad = body.resetBeforeLoad !== false;
     const projectId = this._normalizeProjectId(body.projectId);
+    const projectWorkspacePath = projectId ? this.store.getProject(projectId)?.workspacePath : null;
+    const workspacePath = path.resolve(
+      body.workspacePath
+      || projectWorkspacePath
+      || this.config.workspace
+      || process.cwd(),
+    );
     const force = body.force === true;
     const files = this._bootInputFiles();
 
@@ -1431,7 +1439,9 @@ class Monitor {
           throw err;
         }
         const { loadPrds } = require("../pipeline/prd-loader");
-        const options = projectId ? { resetBeforeLoad, projectId } : { resetBeforeLoad };
+        const options = projectId
+          ? { resetBeforeLoad, projectId, workspacePath }
+          : { resetBeforeLoad, workspacePath };
         await loadPrds(roadmapFile, this.store, this.logger, options);
         if (autoResume && this.control?.resume) {
           this.control.resume(`boot_start_${mode}`, "boot_api");
@@ -1444,6 +1454,7 @@ class Monitor {
           mode,
           action: "reload",
           roadmapFile,
+          workspacePath,
           resetBeforeLoad,
           autoResume,
         };
@@ -1457,7 +1468,9 @@ class Monitor {
           throw err;
         }
         const { loadActivePrd } = require("../pipeline/prd-loader");
-        const options = projectId ? { resetBeforeLoad, projectId } : { resetBeforeLoad };
+        const options = projectId
+          ? { resetBeforeLoad, projectId, workspacePath }
+          : { resetBeforeLoad, workspacePath };
         await loadActivePrd(prdFile, this.store, this.logger, options);
         if (autoResume && this.control?.resume) {
           this.control.resume(`boot_start_${mode}`, "boot_api");
@@ -1470,6 +1483,7 @@ class Monitor {
           mode,
           action: "reload",
           prdFile,
+          workspacePath,
           resetBeforeLoad,
           autoResume,
         };

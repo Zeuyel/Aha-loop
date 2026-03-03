@@ -1,6 +1,22 @@
 "use strict";
 
+const os = require("node:os");
 const path = require("node:path");
+
+function resolveDefaultGlobalHome() {
+  if (process.env.APPDATA && process.platform === "win32") {
+    return path.resolve(process.env.APPDATA, "aha-loop-mq");
+  }
+  if (process.platform === "darwin") {
+    return path.resolve(os.homedir(), "Library", "Application Support", "aha-loop-mq");
+  }
+  if (process.env.XDG_STATE_HOME) {
+    return path.resolve(process.env.XDG_STATE_HOME, "aha-loop-mq");
+  }
+  return path.resolve(os.homedir(), ".local", "state", "aha-loop-mq");
+}
+
+const DEFAULT_GLOBAL_HOME = resolveDefaultGlobalHome();
 
 const DEFAULTS = {
   // RabbitMQ
@@ -51,10 +67,11 @@ const DEFAULTS = {
   alertRetryRateThreshold: 0.2,
   alertStuckDurationMs: 3 * 60_000,
   alertCooldownMs: 60_000,
-  deadLetterLogFile: ".aha-loop/dead-letters.jsonl",
+  deadLetterLogFile: "dead-letters.jsonl",
 
   // 存储
-  stateFile: ".aha-loop/state.json",
+  globalHome: DEFAULT_GLOBAL_HOME,
+  stateFile: "state.json",
 
   // 工具
   defaultTool: "codex",
@@ -79,8 +96,15 @@ const DEFAULTS = {
 
 function loadConfig(argv = []) {
   const config = { ...DEFAULTS };
+  let stateFileFromDefault = true;
+  let deadLetterLogFileFromDefault = true;
 
   // 环境变量覆盖
+  if (process.env.AHA_LOOP_HOME) config.globalHome = process.env.AHA_LOOP_HOME;
+  if (process.env.AHA_LOOP_STATE_FILE) {
+    config.stateFile = process.env.AHA_LOOP_STATE_FILE;
+    stateFileFromDefault = false;
+  }
   if (process.env.RMQ_URL) config.rmqUrl = process.env.RMQ_URL;
   if (process.env.RMQ_HEARTBEAT_SEC) config.rmqHeartbeatSec = parseInt(process.env.RMQ_HEARTBEAT_SEC, 10);
   if (process.env.RMQ_CONNECTION_TIMEOUT_MS) config.rmqConnectionTimeoutMs = parseInt(process.env.RMQ_CONNECTION_TIMEOUT_MS, 10);
@@ -120,7 +144,10 @@ function loadConfig(argv = []) {
   if (process.env.ALERT_RETRY_RATE_THRESHOLD) config.alertRetryRateThreshold = parseFloat(process.env.ALERT_RETRY_RATE_THRESHOLD);
   if (process.env.ALERT_STUCK_DURATION_MS) config.alertStuckDurationMs = parseInt(process.env.ALERT_STUCK_DURATION_MS, 10);
   if (process.env.ALERT_COOLDOWN_MS) config.alertCooldownMs = parseInt(process.env.ALERT_COOLDOWN_MS, 10);
-  if (process.env.DEAD_LETTER_LOG_FILE) config.deadLetterLogFile = process.env.DEAD_LETTER_LOG_FILE;
+  if (process.env.DEAD_LETTER_LOG_FILE) {
+    config.deadLetterLogFile = process.env.DEAD_LETTER_LOG_FILE;
+    deadLetterLogFileFromDefault = false;
+  }
   if (process.env.DELIVERY_SEMANTICS) config.deliverySemantics = process.env.DELIVERY_SEMANTICS;
   if (process.env.ARCHITECTURE_FILE) config.architectureFile = process.env.ARCHITECTURE_FILE;
   if (process.env.ROADMAP_OUTPUT_FILE) config.roadmapOutputFile = process.env.ROADMAP_OUTPUT_FILE;
@@ -142,6 +169,14 @@ function loadConfig(argv = []) {
         break;
       case "--workspace":
         config.workspace = argv[++i];
+        break;
+      case "--home":
+      case "--global-home":
+        config.globalHome = argv[++i];
+        break;
+      case "--state-file":
+        config.stateFile = argv[++i];
+        stateFileFromDefault = false;
         break;
       case "--tool":
         config.defaultTool = argv[++i];
@@ -190,9 +225,15 @@ function loadConfig(argv = []) {
 
   // 解析绝对路径
   config.workspace = path.resolve(config.workspace);
-  config.stateFile = path.resolve(config.workspace, config.stateFile);
+  config.globalHome = path.resolve(config.globalHome || DEFAULT_GLOBAL_HOME);
+  config.stateFile = stateFileFromDefault
+    ? path.resolve(config.globalHome, config.stateFile)
+    : path.resolve(config.workspace, config.stateFile);
+  config.legacyWorkspaceStateFile = path.resolve(config.workspace, ".aha-loop", "state.json");
   config.worktreeDir = path.resolve(config.workspace, config.worktreeDir);
-  config.deadLetterLogFile = path.resolve(config.workspace, config.deadLetterLogFile);
+  config.deadLetterLogFile = deadLetterLogFileFromDefault
+    ? path.resolve(config.globalHome, config.deadLetterLogFile)
+    : path.resolve(config.workspace, config.deadLetterLogFile);
   config.architectureFile = path.isAbsolute(config.architectureFile)
     ? config.architectureFile
     : path.resolve(config.workspace, config.architectureFile);
