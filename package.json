@@ -5,13 +5,15 @@
   "main": "src/index.js",
   "bin": {
     "aha-loop": "bin/aha-loop.js",
-    "aha-loop-mq": "bin/aha-loop.js",
+    "aha-loop-engine": "bin/aha-loop-engine.js",
+    "aha-loop-mq": "bin/aha-loop-engine.js",
     "aha-loop-web": "bin/aha-loop-web.js"
   },
   "scripts": {
     "start": "node bin/aha-loop.js",
+    "start:engine": "node bin/aha-loop-engine.js",
     "dev": "node --watch src/index.js",
-    "ui": "node bin/aha-loop.js --resume-from-state",
+    "ui": "node bin/aha-loop-engine.js --resume-from-state",
     "web": "node bin/aha-loop-web.js",
     "web:dev": "node --watch src/web.js",
     "pack:check": "npm pack --dry-run"

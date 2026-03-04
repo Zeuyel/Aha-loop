@@ -12,40 +12,42 @@ npm install -g aha-loop-mq
 
 可用命令：
 
-- `aha-loop` / `aha-loop-mq`：启动完整引擎
-- `aha-loop-web`：仅启动前端页面与监控 API（联调模式）
+- `aha-loop`：启动前端应用（Web 入口，默认打开项目看板能力）
+- `aha-loop-engine` / `aha-loop-mq`：启动完整引擎（Scheduler + Worker + RabbitMQ）
+- `aha-loop-web`：仅启动前端页面与监控 API（联调模式，等价于 `aha-loop`）
 
 示例：
 
 ```bash
-aha-loop --vision ./project.vision.md --workspace /path/to/project
-aha-loop-web --monitor-port 17373
+aha-loop --monitor-port 17373
+aha-loop-engine --vision ./project.vision.md --workspace /path/to/project
 ```
 
 也可直接使用 npx：
 
 ```bash
+npx -y -p aha-loop-mq aha-loop --monitor-port 17373
 npx -y aha-loop-mq --vision ./project.vision.md --workspace /path/to/project
 ```
 
-## 唯一入口
+## 入口模式
 
-用户只需提供 `project.vision.md`:
+默认入口（Web-first）:
 
 ```bash
-npx aha-loop --vision ./project.vision.md --workspace /path/to/project
+npx -y -p aha-loop-mq aha-loop
 ```
 
-或使用本地监控入口（默认恢复状态）:
+完整引擎入口（默认恢复状态）:
 
 ```bash
-npm run ui
+npm run start:engine
 ```
 
-仅启动前端页面与只读/项目管理 API（不启动 MQ worker/scheduler）:
+仅启动前端页面与项目管理 API（不启动 MQ worker/scheduler）:
 
 ```bash
-npm run web
+npm run start
 ```
 
 说明：`web` 模式下控制动作返回模拟结果，仅用于页面联调/演示。
