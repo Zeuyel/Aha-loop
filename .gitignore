@@ -34,3 +34,18 @@ docs-review-report.md
 .god/council/chamber.lock
 .god/council/chamber.lock.tmp
 logs/awakener.log
+
+# Node/npm runtime artifacts
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Aha-loop runtime state/logs
+.aha-loop/
+
+# Local scratch artifacts
+tmp_*
+*.log
+*.png
+*.pen
