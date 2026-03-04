@@ -216,8 +216,13 @@ body[data-page="boot"] .project-new-btn {
   display: inline-flex;
 }
 
-body[data-page]:not([data-page="boot"]) .project-stat-chip,
-body[data-page]:not([data-page="boot"]) .project-new-btn {
+body[data-page="projects"] .project-stat-chip,
+body[data-page="projects"] .project-new-btn {
+  display: inline-flex;
+}
+
+body[data-page]:not([data-page="boot"]):not([data-page="projects"]) .project-stat-chip,
+body[data-page]:not([data-page="boot"]):not([data-page="projects"]) .project-new-btn {
   display: none;
 }
 
@@ -1726,6 +1731,21 @@ tbody tr.selected {
 .project-create-actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.project-edit-runtime {
+  margin: 12px 16px 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.project-edit-runtime .panel-head h3 {
+  font-size: 14px;
+}
+
+.project-edit-runtime .control-grid {
+  padding: 12px;
 }
 
 .project-modal-card .step-body {

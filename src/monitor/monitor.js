@@ -991,7 +991,7 @@ class Monitor {
 
     if (Object.prototype.hasOwnProperty.call(body, "bootMode")) {
       const mode = String(body.bootMode || "").trim().toLowerCase();
-      const allow = new Set(["resume_existing", "reload_from_prd", "reload_from_roadmap"]);
+      const allow = new Set(["resume_existing", "reload_from_prd", "reload_from_roadmap", "reload_from_vision"]);
       if (mode && !allow.has(mode)) {
         const err = new Error("invalid_project_boot_mode");
         err.statusCode = 400;
@@ -1018,6 +1018,12 @@ class Monitor {
       out.roadmapFile = normalizeOptionalPath(body.roadmapFile);
     } else if (!partial) {
       out.roadmapFile = null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, "visionFile")) {
+      out.visionFile = normalizeOptionalPath(body.visionFile);
+    } else if (!partial) {
+      out.visionFile = null;
     }
 
     return out;
@@ -1053,6 +1059,7 @@ class Monitor {
         workspacePath: item.workspacePath || null,
         prdFile: item.prdFile || null,
         roadmapFile: item.roadmapFile || null,
+        visionFile: item.visionFile || null,
         createdAt: item.createdAt || null,
         updatedAt: item.updatedAt || null,
         source: item.source || source,
@@ -1088,6 +1095,9 @@ class Monitor {
     const roadmapFile = this.config.roadmapFile
       ? path.resolve(this.config.roadmapFile)
       : path.resolve(workspacePath, ".aha-loop", "project.roadmap.json");
+    const visionFile = this.config.visionFile
+      ? path.resolve(this.config.visionFile)
+      : path.resolve(workspacePath, ".aha-loop", "project.vision.md");
 
     return {
       id: `proj-${slug}`,
@@ -1102,6 +1112,7 @@ class Monitor {
       workspacePath,
       prdFile,
       roadmapFile,
+      visionFile,
       createdAt: now,
       updatedAt: now,
       source: "workspace_default",
@@ -1326,6 +1337,7 @@ class Monitor {
         defaultMode: "resume_existing",
         supportedModes: [
           "resume_existing",
+          "reload_from_vision",
           "reload_from_roadmap",
           "reload_from_prd",
         ],
@@ -1369,6 +1381,7 @@ class Monitor {
       defaultMode: "resume_existing",
       supportedModes: [
         "resume_existing",
+        "reload_from_vision",
         "reload_from_roadmap",
         "reload_from_prd",
       ],
@@ -1431,6 +1444,48 @@ class Monitor {
     }
 
     try {
+      if (mode === "reload_from_vision") {
+        const defaultVisionFile = path.resolve(workspacePath, ".aha-loop", "project.vision.md");
+        const visionFile = path.resolve(body.visionFile || defaultVisionFile);
+        if (!(await this._pathExists(visionFile))) {
+          const err = new Error(`vision_file_not_found: ${visionFile}`);
+          err.statusCode = 400;
+          throw err;
+        }
+        const { Pipeline } = require("../pipeline/pipeline");
+        const architectureFile = path.resolve(workspacePath, ".aha-loop", "project.architecture.md");
+        const roadmapOutputFile = path.resolve(workspacePath, ".aha-loop", "project.roadmap.json");
+        const pipeline = new Pipeline(
+          {
+            ...this.config,
+            workspace: workspacePath,
+            visionFile,
+            architectureFile,
+            roadmapOutputFile,
+          },
+          this.store,
+          this.logger,
+        );
+        await pipeline.run(visionFile);
+        if (autoResume && this.control?.resume) {
+          this.control.resume(`boot_start_${mode}`, "boot_api");
+        }
+        if (!autoResume && wasPaused && this.control?.pause) {
+          this.control.pause("restore_previous_pause_state", "boot_api");
+        }
+        return {
+          ok: true,
+          mode,
+          action: "reload",
+          visionFile,
+          architectureFile,
+          roadmapOutputFile,
+          workspacePath,
+          resetBeforeLoad,
+          autoResume,
+        };
+      }
+
       if (mode === "reload_from_roadmap") {
         const roadmapFile = path.resolve(body.roadmapFile || files.roadmapFile);
         if (!(await this._pathExists(roadmapFile))) {
@@ -1537,6 +1592,7 @@ class Monitor {
         projectId,
         prdFile: body.prdFile || project.prdFile || undefined,
         roadmapFile: body.roadmapFile || project.roadmapFile || undefined,
+        visionFile: body.visionFile || project.visionFile || undefined,
       });
       this.store.setProject({
         ...project,
@@ -1544,6 +1600,7 @@ class Monitor {
         bootMode: mode,
         prdFile: body.prdFile || project.prdFile || null,
         roadmapFile: body.roadmapFile || project.roadmapFile || null,
+        visionFile: body.visionFile || project.visionFile || null,
         source: "store",
         lastControlAction: "start",
         lastControlAt: now,

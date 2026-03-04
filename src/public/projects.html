@@ -96,6 +96,7 @@
                 <span>start mode</span>
                 <select id="project-control-mode" class="input mono-input control-input">
                   <option value="resume_existing">resume_existing</option>
+                  <option value="reload_from_vision">reload_from_vision</option>
                   <option value="reload_from_prd">reload_from_prd</option>
                   <option value="reload_from_roadmap">reload_from_roadmap</option>
                 </select>
@@ -115,6 +116,10 @@
               <label>
                 <span>Roadmap File (optional)</span>
                 <input id="project-control-roadmap-file" class="input mono-input control-input" placeholder="C:\repo\project\.aha-loop\project.roadmap.json">
+              </label>
+              <label>
+                <span>Vision File (optional)</span>
+                <input id="project-control-vision-file" class="input mono-input control-input" placeholder="C:\repo\project\.aha-loop\project.vision.md">
               </label>
             </div>
             <div class="control-actions">
@@ -138,7 +143,7 @@
                 <h3 id="boot-step-title">NEW PROJECT SETUP</h3>
                 <p id="boot-step-subtitle" class="panel-meta">Step 1 Workspace · Step 2 Vision · Step 3 Preflight · Step 4 Boot</p>
               </div>
-              <button type="button" class="btn btn-accent" data-project-modal="close">GUIDE FLOW</button>
+              <button id="project-modal-close-btn" type="button" class="btn btn-accent" data-project-modal="close">GUIDE FLOW</button>
             </div>
 
             <div class="project-create-form">
@@ -187,6 +192,7 @@
                   <span>Boot Mode</span>
                   <select id="project-create-boot-mode" class="input mono-input">
                     <option value="resume_existing">resume_existing</option>
+                    <option value="reload_from_vision">reload_from_vision</option>
                     <option value="reload_from_prd">reload_from_prd</option>
                     <option value="reload_from_roadmap">reload_from_roadmap</option>
                   </select>
@@ -206,16 +212,69 @@
                   <input id="project-create-roadmap-file" class="input mono-input" placeholder="C:\\repo\\project\\project.roadmap.json">
                 </label>
               </div>
+              <label>
+                <span>Vision File (optional)</span>
+                <input id="project-create-vision-file" class="input mono-input" placeholder="C:\\repo\\project\\project.vision.md">
+              </label>
               <div class="project-create-actions">
                 <button class="btn btn-muted" data-project-action="cancel_edit">Cancel Edit</button>
                 <button id="project-create-submit" class="btn btn-accent" data-project-action="create">Create Project</button>
               </div>
             </div>
 
+            <article id="project-edit-runtime" class="panel project-edit-runtime hidden">
+              <div class="panel-head">
+                <h3>Project Runtime Controls</h3>
+                <span class="panel-meta">project-scoped controls in edit mode</span>
+              </div>
+              <div class="control-grid">
+                <div class="control-targets">
+                  <label>
+                    <span>start mode</span>
+                    <select id="project-edit-control-mode" class="input mono-input control-input">
+                      <option value="resume_existing">resume_existing</option>
+                      <option value="reload_from_vision">reload_from_vision</option>
+                      <option value="reload_from_prd">reload_from_prd</option>
+                      <option value="reload_from_roadmap">reload_from_roadmap</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>storyId (optional)</span>
+                    <input id="project-edit-control-story-id" class="input mono-input control-input" placeholder="PRD-xxx-Sxx">
+                  </label>
+                  <label>
+                    <span>runId (optional)</span>
+                    <input id="project-edit-control-run-id" class="input mono-input control-input" placeholder="run-xxxx">
+                  </label>
+                  <label>
+                    <span>PRD File (optional)</span>
+                    <input id="project-edit-control-prd-file" class="input mono-input control-input" placeholder="C:\repo\project\.aha-loop\prd.json">
+                  </label>
+                  <label>
+                    <span>Roadmap File (optional)</span>
+                    <input id="project-edit-control-roadmap-file" class="input mono-input control-input" placeholder="C:\repo\project\.aha-loop\project.roadmap.json">
+                  </label>
+                  <label>
+                    <span>Vision File (optional)</span>
+                    <input id="project-edit-control-vision-file" class="input mono-input control-input" placeholder="C:\repo\project\.aha-loop\project.vision.md">
+                  </label>
+                </div>
+                <div class="control-actions">
+                  <button class="btn btn-accent" data-project-edit-control="start">Start</button>
+                  <button class="btn btn-dark" data-project-edit-control="pause">Pause</button>
+                  <button class="btn btn-ok" data-project-edit-control="resume">Resume</button>
+                  <button class="btn btn-warn" data-project-edit-control="restart">Restart Story/Run</button>
+                  <button class="btn btn-soft" data-project-edit-control="approve_merge">Approve Merge</button>
+                  <button class="btn btn-bad" data-project-edit-control="cancel">Cancel Story/Run</button>
+                </div>
+                <div id="project-edit-control-state" class="mono subtle">project runtime controls ready</div>
+              </div>
+            </article>
+
             <div id="boot-step-tabs" class="step-tabs"></div>
             <div id="boot-step-body" class="step-body grow">loading...</div>
 
-            <div class="wizard-footer">
+            <div id="project-modal-wizard-footer" class="wizard-footer">
               <button id="boot-prev" class="btn btn-muted">Prev</button>
               <span id="boot-step-indicator" class="mono">1 / 4</span>
               <button id="boot-next" class="btn btn-accent">Next Step</button>

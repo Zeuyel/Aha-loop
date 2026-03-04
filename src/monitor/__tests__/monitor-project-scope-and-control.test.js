@@ -240,6 +240,38 @@ runCase("_handleProjectControl start defaults resetBeforeLoad=false and passes p
   assert.equal(captured.resetBeforeLoad, false);
 });
 
+runCase("_handleProjectControl start forwards visionFile for reload_from_vision", async () => {
+  const store = new FakeStore();
+  store.setProject({
+    id: "proj-v",
+    name: "Project Vision",
+    stage: "backlog",
+    bootMode: "reload_from_vision",
+    visionFile: "/tmp/project-vision.md",
+  });
+
+  const control = {
+    pause() {},
+    resume() {},
+    restart() {},
+    cancel() {},
+    async approveMerge() { return { ok: true }; },
+  };
+  const monitor = createMonitor(store, { control });
+
+  let captured = null;
+  monitor._handleBootStart = async (payload) => {
+    captured = payload;
+    return { ok: true };
+  };
+
+  await monitor._handleProjectControl("proj-v", { action: "start" });
+
+  assert.ok(captured);
+  assert.equal(captured.mode, "reload_from_vision");
+  assert.equal(captured.visionFile, "/tmp/project-vision.md");
+});
+
 runCase("_handleBootStart forwards projectId to loader and keeps old behavior when absent", async () => {
   const store = new FakeStore();
   const monitor = createMonitor(store, {
@@ -289,6 +321,72 @@ runCase("_handleBootStart forwards projectId to loader and keeps old behavior wh
     prdLoader.loadActivePrd = originalLoadActivePrd;
     fs.rmSync(tmpRoot, { recursive: true, force: true });
   }
+});
+
+runCase("_handleBootStart reload_from_vision runs pipeline with workspace-scoped config", async () => {
+  const store = new FakeStore();
+  let pauseCount = 0;
+  let resumeCount = 0;
+  const monitor = createMonitor(store, {
+    control: {
+      getState() { return { paused: false }; },
+      pause() { pauseCount += 1; },
+      resume() { resumeCount += 1; },
+    },
+  });
+
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "monitor-boot-vision-"));
+  const ahaLoopDir = path.join(tmpRoot, ".aha-loop");
+  fs.mkdirSync(ahaLoopDir, { recursive: true });
+  const visionFile = path.join(ahaLoopDir, "project.vision.md");
+  fs.writeFileSync(visionFile, "# project vision\n", "utf8");
+
+  const pipelineModule = require("../../pipeline/pipeline");
+  const originalRun = pipelineModule.Pipeline.prototype.run;
+  let captured = null;
+
+  try {
+    pipelineModule.Pipeline.prototype.run = async function run(visionPath) {
+      captured = {
+        visionPath,
+        workspace: this.config.workspace,
+        architectureFile: this.config.architectureFile,
+        roadmapOutputFile: this.config.roadmapOutputFile,
+      };
+    };
+
+    const payload = await monitor._handleBootStart({
+      mode: "reload_from_vision",
+      workspacePath: tmpRoot,
+      autoResume: false,
+    });
+
+    assert.equal(payload.mode, "reload_from_vision");
+    assert.equal(payload.visionFile, path.resolve(visionFile));
+    assert.ok(captured);
+    assert.equal(captured.visionPath, path.resolve(visionFile));
+    assert.equal(captured.workspace, path.resolve(tmpRoot));
+    assert.equal(captured.architectureFile, path.resolve(tmpRoot, ".aha-loop", "project.architecture.md"));
+    assert.equal(captured.roadmapOutputFile, path.resolve(tmpRoot, ".aha-loop", "project.roadmap.json"));
+    assert.equal(pauseCount, 1);
+    assert.equal(resumeCount, 0);
+  } finally {
+    pipelineModule.Pipeline.prototype.run = originalRun;
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+  }
+});
+
+runCase("boot workspace/preflight include reload_from_vision mode", async () => {
+  const store = new FakeStore();
+  const monitor = createMonitor(store);
+
+  const workspace = monitor._buildBootWorkspace();
+  assert.ok(Array.isArray(workspace?.boot?.supportedModes));
+  assert.ok(workspace.boot.supportedModes.includes("reload_from_vision"));
+
+  const preflight = await monitor._buildBootPreflight();
+  assert.ok(Array.isArray(preflight?.supportedModes));
+  assert.ok(preflight.supportedModes.includes("reload_from_vision"));
 });
 
 async function main() {

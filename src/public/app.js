@@ -60,6 +60,7 @@
   const state = {
     page: initialPage,
     projectModalOpen: false,
+    projectModalMode: "create",
     bootStep: 1,
     deadItems: [],
     deadSelected: null,
@@ -666,14 +667,64 @@
     el.classList.toggle("hidden", hidden);
   }
 
-  function setProjectModal(open) {
+  function syncProjectModalMode() {
+    const mode = state.projectModalMode === "edit" ? "edit" : "create";
+    const isEdit = mode === "edit";
+    const closeLabel = isEdit ? "Close" : "GUIDE FLOW";
+
+    setText("project-modal-close-btn", closeLabel);
+    setText("boot-step-title", isEdit ? "EDIT PROJECT" : "NEW PROJECT SETUP");
+    setText(
+      "boot-step-subtitle",
+      isEdit
+        ? "Update project metadata and run project-scoped controls"
+        : "Step 1 Workspace · Step 2 Vision · Step 3 Preflight · Step 4 Boot",
+    );
+
+    setHidden("boot-step-tabs", isEdit);
+    setHidden("boot-step-body", isEdit);
+    setHidden("project-modal-wizard-footer", isEdit);
+    setHidden("boot-control-result", isEdit);
+    setHidden("project-edit-runtime", !isEdit);
+
+    if (!isEdit) return;
+
+    if ($("project-edit-control-mode")) {
+      $("project-edit-control-mode").value = $("project-create-boot-mode")?.value || "resume_existing";
+    }
+    if ($("project-edit-control-prd-file")) {
+      $("project-edit-control-prd-file").value = $("project-create-prd-file")?.value || "";
+    }
+    if ($("project-edit-control-roadmap-file")) {
+      $("project-edit-control-roadmap-file").value = $("project-create-roadmap-file")?.value || "";
+    }
+    if ($("project-edit-control-vision-file")) {
+      $("project-edit-control-vision-file").value = $("project-create-vision-file")?.value || "";
+    }
+
+    const projectName = $("project-create-name")?.value?.trim() || $("project-edit-id")?.value?.trim() || "project";
+    setText("project-edit-control-state", `${projectName} · runtime controls ready`);
+  }
+
+  function openProjectCreateModal() {
+    state.projectModalMode = "create";
+    clearProjectCreateForm();
+    setProjectModal(true, { mode: "create" });
+  }
+
+  function setProjectModal(open, { mode = null } = {}) {
     const modal = $("project-modal");
     if (!modal) return;
+    if (mode === "edit" || mode === "create") state.projectModalMode = mode;
     state.projectModalOpen = Boolean(open);
     modal.classList.toggle("hidden", !state.projectModalOpen);
     if (state.projectModalOpen && $("project-create-name")) {
       $("project-create-name").focus();
     }
+    if (!state.projectModalOpen) {
+      state.projectModalMode = "create";
+    }
+    syncProjectModalMode();
   }
 
   function syncPageChrome(page) {
@@ -845,6 +896,7 @@
     if (modeSelect && current?.bootMode) modeSelect.value = current.bootMode;
     if ($("project-control-prd-file")) $("project-control-prd-file").value = current?.prdFile || "";
     if ($("project-control-roadmap-file")) $("project-control-roadmap-file").value = current?.roadmapFile || "";
+    if ($("project-control-vision-file")) $("project-control-vision-file").value = current?.visionFile || "";
 
     const paused = Boolean(health?.control?.paused);
     const meta = current
@@ -871,6 +923,7 @@
     const prdFile = $("project-create-prd-file")?.value?.trim() || null;
     const workspacePath = $("project-create-workspace-path")?.value?.trim() || null;
     const roadmapFile = $("project-create-roadmap-file")?.value?.trim() || null;
+    const visionFile = $("project-create-vision-file")?.value?.trim() || null;
 
     return {
       name,
@@ -884,6 +937,7 @@
       prdFile,
       workspacePath,
       roadmapFile,
+      visionFile,
     };
   }
 
@@ -900,7 +954,15 @@
     if ($("project-create-prd-file")) $("project-create-prd-file").value = "";
     if ($("project-create-workspace-path")) $("project-create-workspace-path").value = "";
     if ($("project-create-roadmap-file")) $("project-create-roadmap-file").value = "";
+    if ($("project-create-vision-file")) $("project-create-vision-file").value = "";
     if ($("project-create-submit")) $("project-create-submit").textContent = "Create Project";
+    if ($("project-edit-control-mode")) $("project-edit-control-mode").value = "resume_existing";
+    if ($("project-edit-control-story-id")) $("project-edit-control-story-id").value = "";
+    if ($("project-edit-control-run-id")) $("project-edit-control-run-id").value = "";
+    if ($("project-edit-control-prd-file")) $("project-edit-control-prd-file").value = "";
+    if ($("project-edit-control-roadmap-file")) $("project-edit-control-roadmap-file").value = "";
+    if ($("project-edit-control-vision-file")) $("project-edit-control-vision-file").value = "";
+    setText("project-edit-control-state", "project runtime controls ready");
   }
 
   async function createProject() {
@@ -908,12 +970,19 @@
     const payload = getProjectCreatePayload();
     if (editId) {
       await patchJson(`/projects/${encodeURIComponent(editId)}`, payload);
+      clearCache(["projects"]);
+      setText("control-result", `project updated · ${formatEast8(Date.now(), true)}`);
+      await renderBoot();
+      await startEditProject(editId);
+      return;
     } else {
       await postJson("/projects", payload);
     }
     clearProjectCreateForm();
+    state.projectModalMode = "create";
+    syncProjectModalMode();
     clearCache(["projects"]);
-    setText("control-result", `${editId ? "project updated" : "project created"} · ${formatEast8(Date.now(), true)}`);
+    setText("control-result", `project created · ${formatEast8(Date.now(), true)}`);
     await renderBoot();
   }
 
@@ -935,8 +1004,15 @@
     if ($("project-create-prd-file")) $("project-create-prd-file").value = project.prdFile || "";
     if ($("project-create-workspace-path")) $("project-create-workspace-path").value = project.workspacePath || "";
     if ($("project-create-roadmap-file")) $("project-create-roadmap-file").value = project.roadmapFile || "";
+    if ($("project-create-vision-file")) $("project-create-vision-file").value = project.visionFile || "";
     if ($("project-create-submit")) $("project-create-submit").textContent = "Save Project";
-    setProjectModal(true);
+    if ($("project-edit-control-mode")) $("project-edit-control-mode").value = project.bootMode || "resume_existing";
+    if ($("project-edit-control-story-id")) $("project-edit-control-story-id").value = "";
+    if ($("project-edit-control-run-id")) $("project-edit-control-run-id").value = "";
+    if ($("project-edit-control-prd-file")) $("project-edit-control-prd-file").value = project.prdFile || "";
+    if ($("project-edit-control-roadmap-file")) $("project-edit-control-roadmap-file").value = project.roadmapFile || "";
+    if ($("project-edit-control-vision-file")) $("project-edit-control-vision-file").value = project.visionFile || "";
+    setProjectModal(true, { mode: "edit" });
   }
 
   async function moveProject(projectId, currentStage, direction) {
@@ -1081,6 +1157,7 @@
         <div style="margin-top:10px;">
           <div class="control-actions">
             <button class="btn btn-accent" data-boot-start="resume_existing">BOOT: Resume</button>
+            <button class="btn btn-soft" data-boot-start="reload_from_vision" ${fileStatus.vision === "found" ? "" : "disabled"}>BOOT: Reload Vision</button>
             <button class="btn btn-soft" data-boot-start="reload_from_roadmap" ${fileStatus.roadmap === "found" ? "" : "disabled"}>BOOT: Reload Roadmap</button>
             <button class="btn btn-muted" data-boot-start="reload_from_prd" ${fileStatus.prd === "found" ? "" : "disabled"}>BOOT: Reload PRD</button>
           </div>
@@ -1118,6 +1195,7 @@
     setHtml("boot-step-body", html);
     renderProjectsBoard(projects);
     populateProjectRuntimeControls(projects, health);
+    syncProjectModalMode();
     refreshIcons();
   }
 
@@ -2180,12 +2258,14 @@
     if (!projectId) throw new Error("projectId is required");
     setSelectedProjectId(projectId);
     const mode = extra.mode || $("project-control-mode")?.value?.trim() || "resume_existing";
-    const prdFileInput = $("project-control-prd-file")?.value?.trim() || "";
-    const roadmapFileInput = $("project-control-roadmap-file")?.value?.trim() || "";
+    const prdFileInput = extra.prdFile || $("project-control-prd-file")?.value?.trim() || "";
+    const roadmapFileInput = extra.roadmapFile || $("project-control-roadmap-file")?.value?.trim() || "";
+    const visionFileInput = extra.visionFile || $("project-control-vision-file")?.value?.trim() || "";
     const body = { action, mode, reason: "requested_from_projects", ...extra };
     if (action === "start") {
       if (prdFileInput) body.prdFile = prdFileInput;
       if (roadmapFileInput) body.roadmapFile = roadmapFileInput;
+      if (visionFileInput) body.visionFile = visionFileInput;
     }
     delete body.projectId;
     delete body.mode;
@@ -2206,6 +2286,35 @@
     setText("project-control-state", `${summary} ok · ${formatEast8(Date.now(), true)}`);
     setText("control-result", `${summary} ok · ${formatEast8(Date.now(), true)}`);
     await refresh();
+  }
+
+  async function sendProjectEditControl(action) {
+    const projectId = $("project-edit-id")?.value?.trim() || "";
+    if (!projectId) throw new Error("projectId is required");
+
+    const mode = $("project-edit-control-mode")?.value?.trim() || $("project-create-boot-mode")?.value?.trim() || "resume_existing";
+    const storyId = $("project-edit-control-story-id")?.value?.trim() || "";
+    const runId = $("project-edit-control-run-id")?.value?.trim() || "";
+    const prdFile = $("project-edit-control-prd-file")?.value?.trim() || "";
+    const roadmapFile = $("project-edit-control-roadmap-file")?.value?.trim() || "";
+    const visionFile = $("project-edit-control-vision-file")?.value?.trim() || "";
+
+    const extra = {
+      projectId,
+      mode,
+      reason: "requested_from_project_edit_modal",
+    };
+
+    if (storyId) extra.storyId = storyId;
+    if (runId) extra.runId = runId;
+    if (action === "start") {
+      if (prdFile) extra.prdFile = prdFile;
+      if (roadmapFile) extra.roadmapFile = roadmapFile;
+      if (visionFile) extra.visionFile = visionFile;
+    }
+
+    await sendProjectControl(action, extra);
+    setText("project-edit-control-state", `${action} ok · ${formatEast8(Date.now(), true)}`);
   }
 
   async function sendBootStart(mode, extra = {}) {
@@ -2292,7 +2401,7 @@
     const projectModalBtn = event.target.closest("[data-project-modal]");
     if (projectModalBtn) {
       const action = projectModalBtn.dataset.projectModal;
-      if (action === "open") setProjectModal(true);
+      if (action === "open") openProjectCreateModal();
       if (action === "close") setProjectModal(false);
       return;
     }
@@ -2308,7 +2417,12 @@
           return;
         }
         if (action === "cancel_edit") {
-          clearProjectCreateForm();
+          if (state.projectModalMode === "edit") {
+            setProjectModal(false);
+          } else {
+            clearProjectCreateForm();
+            syncProjectModalMode();
+          }
           return;
         }
         if (action === "edit" && projectId) {
@@ -2331,6 +2445,18 @@
         setText("control-result", `project action failed: ${err.message}`);
         return;
       }
+    }
+
+    const projectEditControlBtn = event.target.closest("[data-project-edit-control]");
+    if (projectEditControlBtn) {
+      const action = projectEditControlBtn.dataset.projectEditControl || "";
+      try {
+        await sendProjectEditControl(action);
+      } catch (err) {
+        setText("project-edit-control-state", `project control failed: ${err.message}`);
+        setText("control-result", `project control failed: ${err.message}`);
+      }
+      return;
     }
 
     const projectControlBtn = event.target.closest("[data-project-control]");
@@ -2548,6 +2674,18 @@
       if (modeSelect && current?.bootMode) modeSelect.value = current.bootMode;
       if ($("project-control-prd-file")) $("project-control-prd-file").value = current?.prdFile || "";
       if ($("project-control-roadmap-file")) $("project-control-roadmap-file").value = current?.roadmapFile || "";
+      if ($("project-control-vision-file")) $("project-control-vision-file").value = current?.visionFile || "";
+      return;
+    }
+
+    if (
+      state.projectModalMode === "edit"
+      && (event.target.id === "project-create-boot-mode"
+        || event.target.id === "project-create-prd-file"
+        || event.target.id === "project-create-roadmap-file"
+        || event.target.id === "project-create-vision-file")
+    ) {
+      syncProjectModalMode();
       return;
     }
 
