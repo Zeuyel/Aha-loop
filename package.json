@@ -15,7 +15,7 @@
     "dev": "node --watch src/index.js",
     "ui": "node bin/aha-loop-engine.js --resume-from-state",
     "web": "node bin/aha-loop-web.js",
-    "web:dev": "node --watch src/web.js",
+    "web:dev": "node --watch src/web-standalone.js",
     "pack:check": "npm pack --dry-run"
   },
   "files": [
